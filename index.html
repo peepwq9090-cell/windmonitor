@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>SARAPHI TECHNICAL WIND SPEED MONITOR</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
     background:#000;
@@ -19,7 +20,7 @@ h1{
 .container{
     display:grid;
     grid-template-columns: 1fr 2fr;
-    grid-template-rows: 300px 300px;
+    grid-template-rows: 320px 320px;
     gap:20px;
     width:90%;
     margin:auto;
@@ -30,6 +31,10 @@ h1{
     border:3px solid white;
     padding:10px;
     background:#111;
+}
+
+canvas{
+    margin-top:10px;
 }
 
 #status{
@@ -73,7 +78,7 @@ let chart24h, chart1h, chartDaily;
 
 function thaiTime(dateString){
     let d = new Date(dateString);
-    return d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+    return d.toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok"});
 }
 
 async function fetchData(minutes){
@@ -82,95 +87,104 @@ async function fetchData(minutes){
     return await res.json();
 }
 
-function createChart(canvas, label){
+function createChart(canvas){
     return new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: label,
-                data: [],
-                borderColor: "#00ff00",
-                tension: 0.4
+        type:'line',
+        data:{
+            labels:[],
+            datasets:[{
+                data:[],
+                borderColor:"#00ff00",
+                tension:0.4
             }]
         },
         options:{
             responsive:true,
+            maintainAspectRatio:false,
+            layout:{ padding:{ bottom:20 }},
             scales:{
-                x:{ ticks:{ color:"white" }},
-                y:{ ticks:{ color:"white" }}
+                x:{
+                    ticks:{
+                        color:"white",
+                        maxTicksLimit:8,
+                        maxRotation:45,
+                        minRotation:45
+                    }
+                },
+                y:{
+                    ticks:{ color:"white" },
+                    beginAtZero:true
+                }
             },
             plugins:{
-                legend:{ labels:{ color:"white" }}
+                legend:{ display:false }
             }
         }
     });
 }
 
 async function updateCharts(){
-
     try{
 
-        // ===== 24 ชั่วโมง =====
         const data24 = await fetchData(1440);
-        const labels24 = data24.feeds.map(f => thaiTime(f.created_at));
-        const values24 = data24.feeds.map(f => Number(f.field1));
+        const labels24 = data24.feeds.map(f=>thaiTime(f.created_at));
+        const values24 = data24.feeds.map(f=>Number(f.field1));
 
         chart24h.data.labels = labels24;
         chart24h.data.datasets[0].data = values24;
         chart24h.update();
 
-        // ===== 1 ชั่วโมง =====
         const data1 = await fetchData(60);
-        const labels1 = data1.feeds.map(f => thaiTime(f.created_at));
-        const values1 = data1.feeds.map(f => Number(f.field1));
+        const labels1 = data1.feeds.map(f=>thaiTime(f.created_at));
+        const values1 = data1.feeds.map(f=>Number(f.field1));
 
         chart1h.data.labels = labels1;
         chart1h.data.datasets[0].data = values1;
         chart1h.update();
 
-        // ===== ค่าสูงสุดรายวัน =====
-        const grouped = {};
+        // daily max
+        const grouped={};
         data24.feeds.forEach(f=>{
-            const date = new Date(f.created_at).toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
-            const val = Number(f.field1);
-            if(!grouped[date] || val > grouped[date]){
-                grouped[date] = val;
+            const date=new Date(f.created_at).toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
+            const val=Number(f.field1);
+            if(!grouped[date] || val>grouped[date]){
+                grouped[date]=val;
             }
         });
 
-        chartDaily.data.labels = Object.keys(grouped);
-        chartDaily.data.datasets[0].data = Object.values(grouped);
+        chartDaily.data.labels=Object.keys(grouped);
+        chartDaily.data.datasets[0].data=Object.values(grouped);
         chartDaily.update();
 
-        // ===== ตรวจสถานะ =====
-        const lastTime = new Date(data1.feeds[data1.feeds.length-1].created_at);
-        const now = new Date();
-        const diff = (now - lastTime)/1000;
+        // status check
+        const lastTime=new Date(data1.feeds[data1.feeds.length-1].created_at);
+        const now=new Date();
+        const diff=(now-lastTime)/1000;
 
-        if(diff > 60){
-            document.getElementById("status").innerHTML = "🔴 ระบบปิด / ไม่ส่งข้อมูล";
-            document.getElementById("status").style.color = "red";
+        if(diff>60){
+            status.innerHTML="🔴 ระบบปิด / ไม่ส่งข้อมูล";
+            status.style.color="red";
         }else{
-            document.getElementById("status").innerHTML = "🟢 ระบบเปิด / ทำงานปกติ";
-            document.getElementById("status").style.color = "lime";
+            status.innerHTML="🟢 ระบบเปิด / ทำงานปกติ";
+            status.style.color="lime";
         }
 
     }catch{
-        document.getElementById("status").innerHTML = "⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
-        document.getElementById("status").style.color = "orange";
+        status.innerHTML="⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
+        status.style.color="orange";
     }
 }
 
-window.onload = ()=>{
-    chart24h = createChart(document.getElementById("chart24h"), "Wind Speed 24h");
-    chart1h = createChart(document.getElementById("chart1h"), "Wind Speed 1h");
-    chartDaily = createChart(document.getElementById("chartDaily"), "Max Per Day");
+window.onload=()=>{
+    chart24h=createChart(document.getElementById("chart24h"));
+    chart1h=createChart(document.getElementById("chart1h"));
+    chartDaily=createChart(document.getElementById("chartDaily"));
 
     updateCharts();
-    setInterval(updateCharts,15000); // รีเฟรชทุก 15 วินาที
+    setInterval(updateCharts,15000);
 }
 
 </script>
+
 </body>
 </html>
