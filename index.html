@@ -1,135 +1,176 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SARAPHI TECHNICAL WIND SPEED MONITOR</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            background: black;
-            color: white;
-            text-align: center;
-            font-family: Arial, sans-serif;
-            margin: 0;
-        }
+<meta charset="UTF-8">
+<title>SARAPHI TECHNICAL WIND SPEED MONITOR</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{
+    background:#000;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
 
-        h1 {
-            margin-top: 20px;
-            font-size: 32px;
-        }
+h1{
+    margin-top:20px;
+}
 
-        .chart-container {
-            width: 95%;
-            height: 70vh;
-            margin: auto;
-        }
+.container{
+    display:grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: 300px 300px;
+    gap:20px;
+    width:90%;
+    margin:auto;
+    margin-top:30px;
+}
 
-        #status {
-            font-size: 22px;
-            margin-top: 15px;
-            font-weight: bold;
-        }
-    </style>
+.box{
+    border:3px solid white;
+    padding:10px;
+    background:#111;
+}
+
+#status{
+    margin-top:30px;
+    font-size:22px;
+    font-weight:bold;
+}
+</style>
 </head>
 <body>
 
-<h1>SARAPHI TECHNICAL WIND SPEED MONITOR</h1>
+<h1>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</h1>
 
-<div class="chart-container">
-    <canvas id="windChart"></canvas>
+<div class="container">
+
+    <div class="box">
+        <h3>กราฟ 24 ชม.</h3>
+        <canvas id="chart24h"></canvas>
+    </div>
+
+    <div class="box">
+        <h3>กราฟแสดงตลอด 1 ชม.</h3>
+        <canvas id="chart1h"></canvas>
+    </div>
+
+    <div class="box">
+        <h3>กราฟต่อวันบันทึกค่าสูงสุด</h3>
+        <canvas id="chartDaily"></canvas>
+    </div>
+
 </div>
 
-<div id="status">กำลังเชื่อมต่อ...</div>
+<div id="status">กำลังตรวจสอบสถานะ...</div>
 
 <script>
-const channelID = "3279862";
+
+const channelID = 3279862;
 const readAPI = "RW4WW5ICILK0P78L";
-const fieldNumber = "1";
 
-const ctx = document.getElementById('windChart').getContext('2d');
+let chart24h, chart1h, chartDaily;
 
-const windChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: [{
-            label: 'Wind Speed',
-            data: [],
-            borderColor: 'lime',
-            borderWidth: 3,
-            pointRadius: 4,
-            tension: 0.4
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                ticks: { color: 'white' }
-            },
-            y: {
-                ticks: { color: 'white' }
-            }
+function thaiTime(dateString){
+    let d = new Date(dateString);
+    return d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+}
+
+async function fetchData(minutes){
+    const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPI}&minutes=${minutes}`;
+    const res = await fetch(url);
+    return await res.json();
+}
+
+function createChart(canvas, label){
+    return new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: label,
+                data: [],
+                borderColor: "#00ff00",
+                tension: 0.4
+            }]
         },
-        plugins: {
-            legend: {
-                labels: { color: 'white', font: { size: 18 } }
+        options:{
+            responsive:true,
+            scales:{
+                x:{ ticks:{ color:"white" }},
+                y:{ ticks:{ color:"white" }}
+            },
+            plugins:{
+                legend:{ labels:{ color:"white" }}
             }
         }
-    }
-});
+    });
+}
 
-let lastDataTime = null;
+async function updateCharts(){
 
-async function fetchData() {
-    try {
-        const response = await fetch(
-            `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNumber}.json?api_key=${readAPI}&results=20`
-        );
+    try{
 
-        const data = await response.json();
+        // ===== 24 ชั่วโมง =====
+        const data24 = await fetchData(1440);
+        const labels24 = data24.feeds.map(f => thaiTime(f.created_at));
+        const values24 = data24.feeds.map(f => Number(f.field1));
 
-        const labels = [];
-        const values = [];
+        chart24h.data.labels = labels24;
+        chart24h.data.datasets[0].data = values24;
+        chart24h.update();
 
-        data.feeds.forEach(feed => {
-            if (feed[`field${fieldNumber}`] !== null) {
-                const thaiTime = new Date(feed.created_at).toLocaleTimeString("th-TH", {
-                    timeZone: "Asia/Bangkok"
-                });
-                labels.push(thaiTime);
-                values.push(parseFloat(feed[`field${fieldNumber}`]));
-                lastDataTime = new Date(feed.created_at);
+        // ===== 1 ชั่วโมง =====
+        const data1 = await fetchData(60);
+        const labels1 = data1.feeds.map(f => thaiTime(f.created_at));
+        const values1 = data1.feeds.map(f => Number(f.field1));
+
+        chart1h.data.labels = labels1;
+        chart1h.data.datasets[0].data = values1;
+        chart1h.update();
+
+        // ===== ค่าสูงสุดรายวัน =====
+        const grouped = {};
+        data24.feeds.forEach(f=>{
+            const date = new Date(f.created_at).toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
+            const val = Number(f.field1);
+            if(!grouped[date] || val > grouped[date]){
+                grouped[date] = val;
             }
         });
 
-        windChart.data.labels = labels;
-        windChart.data.datasets[0].data = values;
-        windChart.update();
+        chartDaily.data.labels = Object.keys(grouped);
+        chartDaily.data.datasets[0].data = Object.values(grouped);
+        chartDaily.update();
 
-        // ตรวจสอบว่าออฟไลน์หรือไม่
-        if (lastDataTime) {
-            const now = new Date();
-            const diff = (now - lastDataTime) / 1000;
+        // ===== ตรวจสถานะ =====
+        const lastTime = new Date(data1.feeds[data1.feeds.length-1].created_at);
+        const now = new Date();
+        const diff = (now - lastTime)/1000;
 
-            if (diff > 30) {
-                document.getElementById("status").innerText = "ระบบออฟไลน์";
-                document.getElementById("status").style.color = "red";
-            } else {
-                document.getElementById("status").innerText = "เชื่อมต่อปกติ";
-                document.getElementById("status").style.color = "lime";
-            }
+        if(diff > 60){
+            document.getElementById("status").innerHTML = "🔴 ระบบปิด / ไม่ส่งข้อมูล";
+            document.getElementById("status").style.color = "red";
+        }else{
+            document.getElementById("status").innerHTML = "🟢 ระบบเปิด / ทำงานปกติ";
+            document.getElementById("status").style.color = "lime";
         }
 
-    } catch (error) {
-        document.getElementById("status").innerText = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้";
-        document.getElementById("status").style.color = "red";
+    }catch{
+        document.getElementById("status").innerHTML = "⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
+        document.getElementById("status").style.color = "orange";
     }
 }
 
-fetchData();
-setInterval(fetchData, 5000);
-</script>
+window.onload = ()=>{
+    chart24h = createChart(document.getElementById("chart24h"), "Wind Speed 24h");
+    chart1h = createChart(document.getElementById("chart1h"), "Wind Speed 1h");
+    chartDaily = createChart(document.getElementById("chartDaily"), "Max Per Day");
 
+    updateCharts();
+    setInterval(updateCharts,15000); // รีเฟรชทุก 15 วินาที
+}
+
+</script>
 </body>
 </html>
