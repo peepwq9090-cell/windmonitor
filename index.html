@@ -1,45 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>SARAPHI TECHNICAL WIND SPEED MONITOR</title>
+<title>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
     background:#000;
     color:white;
-    font-family:Arial;
     text-align:center;
-}
-
-h1{
-    margin-top:20px;
+    font-family:Arial;
 }
 
 .container{
     display:grid;
-    grid-template-columns: 1fr 2fr;
-    grid-template-rows: 320px 320px;
+    grid-template-columns:1fr 1fr;
     gap:20px;
-    width:90%;
-    margin:auto;
-    margin-top:30px;
+    padding:20px;
 }
 
 .box{
-    border:3px solid white;
-    padding:10px;
-    background:#111;
+    border:2px solid white;
+    padding:15px;
 }
 
 canvas{
-    margin-top:10px;
+    background:#000;
 }
 
-#status{
-    margin-top:30px;
-    font-size:22px;
+.status{
+    margin-top:20px;
+    font-size:20px;
     font-weight:bold;
 }
 </style>
@@ -50,139 +42,146 @@ canvas{
 
 <div class="container">
 
-    <div class="box">
-        <h3>กราฟ 24 ชม.</h3>
-        <canvas id="chart24h"></canvas>
-    </div>
+<div class="box">
+<h3>กราฟ 24 ชม.</h3>
+<canvas id="chart24"></canvas>
+</div>
 
-    <div class="box">
-        <h3>กราฟแสดงตลอด 1 ชม.</h3>
-        <canvas id="chart1h"></canvas>
-    </div>
+<div class="box">
+<h3>กราฟแสดงตลอด 1 ชม.</h3>
+<canvas id="chart1h"></canvas>
+</div>
 
-    <div class="box">
-        <h3>กราฟต่อวันบันทึกค่าสูงสุด</h3>
-        <canvas id="chartDaily"></canvas>
-    </div>
+<div class="box">
+<h3>กราฟต่อวันบันทึกค่าสูงสุด</h3>
+<canvas id="chartDaily"></canvas>
+</div>
 
 </div>
 
-<div id="status">กำลังตรวจสอบสถานะ...</div>
+<div class="status" id="status">กำลังโหลดข้อมูล...</div>
 
 <script>
 
 const channelID = 3279862;
 const readAPI = "RW4WW5ICILK0P78L";
 
-let chart24h, chart1h, chartDaily;
-
-function thaiTime(dateString){
+function thaiDateTime(dateString){
     let d = new Date(dateString);
-    return d.toLocaleTimeString("th-TH",{timeZone:"Asia/Bangkok"});
+    return d.toLocaleString("th-TH",{
+        timeZone:"Asia/Bangkok",
+        year:"2-digit",
+        month:"2-digit",
+        day:"2-digit",
+        hour:"2-digit",
+        minute:"2-digit"
+    });
 }
 
-async function fetchData(minutes){
-    const url = `https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPI}&minutes=${minutes}`;
-    const res = await fetch(url);
-    return await res.json();
-}
-
-function createChart(canvas){
-    return new Chart(canvas, {
-        type:'line',
+function createChart(ctx,type){
+    return new Chart(ctx,{
+        type:type,
         data:{
             labels:[],
             datasets:[{
                 data:[],
                 borderColor:"#00ff00",
-                tension:0.4
+                backgroundColor:"rgba(0,255,0,0.2)",
+                tension:0.3
             }]
         },
         options:{
             responsive:true,
-            maintainAspectRatio:false,
-            layout:{ padding:{ bottom:20 }},
+            plugins:{ legend:{ display:false } },
             scales:{
-                x:{
-                    ticks:{
-                        color:"white",
-                        maxTicksLimit:8,
-                        maxRotation:45,
-                        minRotation:45
-                    }
-                },
+                x:{ ticks:{ color:"white" }},
                 y:{
-                    ticks:{ color:"white" },
-                    beginAtZero:true
+                    min:0,
+                    max:100,
+                    ticks:{ color:"white" }
                 }
-            },
-            plugins:{
-                legend:{ display:false }
             }
         }
     });
 }
 
+const chart24 = createChart(document.getElementById("chart24"),"line");
+const chart1h = createChart(document.getElementById("chart1h"),"line");
+const chartDaily = createChart(document.getElementById("chartDaily"),"bar");
+
 async function updateCharts(){
-    try{
 
-        const data24 = await fetchData(1440);
-        const labels24 = data24.feeds.map(f=>thaiTime(f.created_at));
-        const values24 = data24.feeds.map(f=>Number(f.field1));
+try{
 
-        chart24h.data.labels = labels24;
-        chart24h.data.datasets[0].data = values24;
-        chart24h.update();
+// -------- 24 ชั่วโมง --------
+let res24 = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPI}&results=200`);
+let data24 = await res24.json();
 
-        const data1 = await fetchData(60);
-        const labels1 = data1.feeds.map(f=>thaiTime(f.created_at));
-        const values1 = data1.feeds.map(f=>Number(f.field1));
+const labels24 = data24.feeds.map(f=>thaiDateTime(f.created_at));
+const values24 = data24.feeds.map(f=>Number(f.field1));
 
-        chart1h.data.labels = labels1;
-        chart1h.data.datasets[0].data = values1;
-        chart1h.update();
+chart24.data.labels = labels24;
+chart24.data.datasets[0].data = values24;
+chart24.update();
 
-        // daily max
-        const grouped={};
-        data24.feeds.forEach(f=>{
-            const date=new Date(f.created_at).toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
-            const val=Number(f.field1);
-            if(!grouped[date] || val>grouped[date]){
-                grouped[date]=val;
-            }
-        });
 
-        chartDaily.data.labels=Object.keys(grouped);
-        chartDaily.data.datasets[0].data=Object.values(grouped);
-        chartDaily.update();
+// -------- 1 ชั่วโมง --------
+let oneHourAgo = new Date(Date.now() - 60*60*1000);
 
-        // status check
-        const lastTime=new Date(data1.feeds[data1.feeds.length-1].created_at);
-        const now=new Date();
-        const diff=(now-lastTime)/1000;
+const feeds1h = data24.feeds.filter(f=>{
+    return new Date(f.created_at) >= oneHourAgo;
+});
 
-        if(diff>60){
-            status.innerHTML="🔴 ระบบปิด / ไม่ส่งข้อมูล";
-            status.style.color="red";
-        }else{
-            status.innerHTML="🟢 ระบบเปิด / ทำงานปกติ";
-            status.style.color="lime";
-        }
+if(feeds1h.length === 0){
+    chart1h.data.labels = ["ไม่มีข้อมูล"];
+    chart1h.data.datasets[0].data = [0];
+}else{
+    chart1h.data.labels = feeds1h.map(f=>thaiDateTime(f.created_at));
+    chart1h.data.datasets[0].data = feeds1h.map(f=>Number(f.field1));
+}
 
-    }catch{
-        status.innerHTML="⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
-        status.style.color="orange";
+chart1h.update();
+
+
+// -------- ค่าสูงสุดต่อวัน --------
+const grouped = {};
+
+data24.feeds.forEach(f=>{
+    const thaiDate = new Date(f.created_at)
+    .toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
+
+    const val = Number(f.field1);
+
+    if(!grouped[thaiDate] || val > grouped[thaiDate]){
+        grouped[thaiDate] = val;
     }
+});
+
+chartDaily.data.labels = Object.keys(grouped);
+chartDaily.data.datasets[0].data = Object.values(grouped);
+chartDaily.update();
+
+
+// -------- เช็คสถานะ --------
+if(data24.feeds.length === 0){
+    document.getElementById("status").innerHTML = "⚠ ไม่มีข้อมูลจากเซิร์ฟเวอร์";
+    document.getElementById("status").style.color="orange";
+}else{
+    document.getElementById("status").innerHTML = "เชื่อมต่อปกติ";
+    document.getElementById("status").style.color="#00ff00";
 }
 
-window.onload=()=>{
-    chart24h=createChart(document.getElementById("chart24h"));
-    chart1h=createChart(document.getElementById("chart1h"));
-    chartDaily=createChart(document.getElementById("chartDaily"));
+}catch(e){
 
-    updateCharts();
-    setInterval(updateCharts,15000);
+document.getElementById("status").innerHTML = "⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
+document.getElementById("status").style.color="orange";
+
 }
+
+}
+
+updateCharts();
+setInterval(updateCharts,10000);
 
 </script>
 
