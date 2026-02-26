@@ -1,10 +1,56 @@
-<h1 style="text-align:center;">SARAPHI TECHNICAL WIND SPEED MONITOR</h1>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Wind Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div style="width:80%; margin:auto;">
+<style>
+body{
+    background:#f2f2f2;
+    font-family: Arial, sans-serif;
+    text-align:center;
+}
+
+h1{
+    margin-top:30px;
+}
+
+.graph-box{
+    width:900px;
+    height:400px;
+    margin:30px auto;
+    border:5px solid black;
+    background:white;
+    padding:20px;
+}
+
+canvas{
+    width:100% !important;
+    height:100% !important;
+}
+
+.status{
+    font-size:22px;
+    margin-top:20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>
+SARAPHI TECHNICAL WIND SPEED MONITOR TEST <br>
+( กราฟแสดงผล ทดสอบ )
+</h1>
+
+<div class="graph-box">
     <canvas id="chart"></canvas>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div class="status" id="status">
+สถานการณ์ทำงาน : กำลังโหลด...
+</div>
 
 <script>
 async function loadData() {
@@ -15,7 +61,7 @@ async function loadData() {
 
     const data = await response.json();
 
-    // แปลงเวลาเป็นเวลาไทย
+    // เวลาไทย
     const labels = data.feeds.map(item => {
         const date = new Date(item.created_at);
         return date.toLocaleString("th-TH", {
@@ -34,25 +80,31 @@ async function loadData() {
             datasets: [{
                 label: "Wind Speed (m/s)",
                 data: values,
-                borderColor: "lime",
-                backgroundColor: "rgba(0,255,0,0.1)",
+                borderColor: "black",
+                backgroundColor: "rgba(0,0,0,0.1)",
                 tension: 0.4
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,   // ไม่ให้เต็มจอ
-            scales: {
-                x: {
-                    ticks: { color: "black" }
-                },
-                y: {
-                    ticks: { color: "black" }
-                }
-            }
+            maintainAspectRatio: false
         }
     });
+
+    // เช็คสถานะ (ถ้ามีค่ามากกว่า 0 = เปิด)
+    const lastValue = values[values.length - 1];
+
+    if(lastValue > 0){
+        document.getElementById("status").innerHTML =
+        "สถานการณ์ทำงาน : เปิด";
+    }else{
+        document.getElementById("status").innerHTML =
+        "สถานการณ์ทำงาน : ปิด";
+    }
 }
 
 loadData();
 </script>
+
+</body>
+</html>
