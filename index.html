@@ -1,115 +1,96 @@
-import requests
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from datetime import datetime
-import pytz
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Wind Speed Monitor</title>
 
-# ==============================
-# ตั้งค่า ThingSpeak
-# ==============================
-CHANNEL_ID = "3279862"
-READ_API_KEY = "RW4WW5ICILK0P78L"
-FIELD = 1
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#e6e6e6;
+    text-align:center;
+}
 
-# ==============================
-# ดึงข้อมูล 24 ชั่วโมง
-# ==============================
-url_24h = f"https://api.thingspeak.com/channels/{CHANNEL_ID}/fields/{FIELD}.json?api_key={READ_API_KEY}&results=200"
-response = requests.get(url_24h)
-data = response.json()
+h1{
+    margin-top:20px;
+    font-size:40px;
+}
 
-feeds = data["feeds"]
+.sub{
+    font-size:22px;
+}
 
-times_24h = []
-values_24h = []
+.container{
+    width:95%;
+    margin:auto;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap:20px;
+    margin-top:30px;
+}
 
-thai_tz = pytz.timezone("Asia/Bangkok")
+.box{
+    background:white;
+    border:6px solid black;
+    padding:10px;
+}
 
-for f in feeds:
-    if f[f"field{FIELD}"] is not None:
-        utc_time = datetime.strptime(f["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-        thai_time = utc_time.replace(tzinfo=pytz.utc).astimezone(thai_tz)
-        times_24h.append(thai_time)
-        values_24h.append(float(f[f"field{FIELD}"]))
+.left-column{
+    display:grid;
+    grid-template-rows: 1fr 1fr;
+    grid-gap:20px;
+}
 
-# ==============================
-# ข้อมูล 1 ชั่วโมงล่าสุด
-# ==============================
-times_1h = times_24h[-60:]
-values_1h = values_24h[-60:]
+iframe{
+    width:100%;
+    height:250px;
+    border:none;
+}
 
-# ==============================
-# ค่าสูงสุดรายวัน (2 วันล่าสุด)
-# ==============================
-daily_max = {}
-for t, v in zip(times_24h, values_24h):
-    day = t.strftime("%d/%m/%y")
-    if day not in daily_max:
-        daily_max[day] = []
-    daily_max[day].append(v)
+.status{
+    margin-top:40px;
+    font-size:32px;
+}
+</style>
+</head>
 
-days = list(daily_max.keys())[-2:]
-max_values = [max(daily_max[d]) for d in days]
+<body>
 
-# ==============================
-# ตรวจสถานะ (ถ้ามีข้อมูลล่าสุด)
-# ==============================
-if len(values_24h) > 0:
-    system_status = "เปิด"
-    status_color = "green"
-else:
-    system_status = "ปิด"
-    status_color = "red"
+<h1>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</h1>
+<div class="sub">(กราฟแสดงผล ทดสอบ)</div>
 
-# ==============================
-# สร้าง Layout ตามรูป
-# ==============================
-fig = plt.figure(figsize=(14,8))
-fig.patch.set_facecolor('#d9d9d9')
+<div class="container">
 
-gs = gridspec.GridSpec(2, 2, width_ratios=[1,2], height_ratios=[1,1])
+    <!-- ฝั่งซ้าย -->
+    <div class="left-column">
+        
+        <div class="box">
+            <h2>กราฟแสดง 24 ชม.</h2>
+            <iframe src="https://thingspeak.com/channels/3279862/charts/1?api_key=YOUR_READ_KEY&days=1">
+            </iframe>
+        </div>
 
-# -------- กราฟ 24 ชม --------
-ax1 = fig.add_subplot(gs[0,0])
-ax1.plot(times_24h, values_24h)
-ax1.set_title("กราฟแสดง 24 ชม.", fontsize=12, fontweight='bold')
-ax1.set_facecolor("white")
-ax1.grid(True)
-for spine in ax1.spines.values():
-    spine.set_linewidth(3)
-    spine.set_color("black")
+        <div class="box">
+            <h2>กราฟต่อวันบันทึกค่าสูงสุด</h2>
+            <iframe src="https://thingspeak.com/channels/3279862/charts/1?api_key=YOUR_READ_KEY&average=1440">
+            </iframe>
+        </div>
 
-# -------- กราฟ 1 ชม --------
-ax2 = fig.add_subplot(gs[:,1])
-ax2.plot(times_1h, values_1h)
-ax2.set_title("กราฟแสดงตลอด 1 ชม.", fontsize=12, fontweight='bold')
-ax2.set_facecolor("white")
-ax2.grid(True)
-for spine in ax2.spines.values():
-    spine.set_linewidth(3)
-    spine.set_color("black")
+    </div>
 
-# -------- กราฟค่าสูงสุด --------
-ax3 = fig.add_subplot(gs[1,0])
-ax3.bar(days, max_values)
-ax3.set_title("กราฟต่อวันบันทึกค่าสูงสุด", fontsize=10, fontweight='bold')
-ax3.set_facecolor("white")
-ax3.grid(True)
-for spine in ax3.spines.values():
-    spine.set_linewidth(3)
-    spine.set_color("black")
+    <!-- ฝั่งขวา -->
+    <div class="box">
+        <h2>กราฟแสดงตลอด 1 ชม.</h2>
+        <iframe src="https://thingspeak.com/channels/3279862/charts/1?api_key=YOUR_READ_KEY&minutes=60">
+        </iframe>
+    </div>
 
-# -------- หัวข้อใหญ่ --------
-fig.suptitle("SARAPHI TECHNICAL WIND SPEED MONITOR TEST\n(กราฟแสดงผล ทดสอบ)",
-             fontsize=18, fontweight="bold")
+</div>
 
-# -------- สถานะ --------
-fig.text(0.5, 0.02,
-         f"สถานะการทำงาน : ( {system_status} )",
-         ha='center',
-         fontsize=14,
-         color=status_color,
-         fontweight="bold")
+<div class="status">
+    สถานการณ์ทำงาน : <b>เปิด</b>
+</div>
 
-plt.tight_layout(rect=[0,0.05,1,0.92])
-plt.show()
+</body>
+</html>
+thingspeak.com
