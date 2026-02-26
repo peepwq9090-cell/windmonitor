@@ -1,189 +1,115 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<title>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+import requests
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+from datetime import datetime
+import pytz
 
-<style>
-body{
-    background:#000;
-    color:white;
-    text-align:center;
-    font-family:Arial;
-}
+# ==============================
+# ตั้งค่า ThingSpeak
+# ==============================
+CHANNEL_ID = "3279862"
+READ_API_KEY = "RW4WW5ICILK0P78L"
+FIELD = 1
 
-.container{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-    padding:20px;
-}
+# ==============================
+# ดึงข้อมูล 24 ชั่วโมง
+# ==============================
+url_24h = f"https://api.thingspeak.com/channels/{CHANNEL_ID}/fields/{FIELD}.json?api_key={READ_API_KEY}&results=200"
+response = requests.get(url_24h)
+data = response.json()
 
-.box{
-    border:2px solid white;
-    padding:15px;
-}
+feeds = data["feeds"]
 
-canvas{
-    background:#000;
-}
+times_24h = []
+values_24h = []
 
-.status{
-    margin-top:20px;
-    font-size:20px;
-    font-weight:bold;
-}
-</style>
-</head>
-<body>
+thai_tz = pytz.timezone("Asia/Bangkok")
 
-<h1>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</h1>
+for f in feeds:
+    if f[f"field{FIELD}"] is not None:
+        utc_time = datetime.strptime(f["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        thai_time = utc_time.replace(tzinfo=pytz.utc).astimezone(thai_tz)
+        times_24h.append(thai_time)
+        values_24h.append(float(f[f"field{FIELD}"]))
 
-<div class="container">
+# ==============================
+# ข้อมูล 1 ชั่วโมงล่าสุด
+# ==============================
+times_1h = times_24h[-60:]
+values_1h = values_24h[-60:]
 
-<div class="box">
-<h3>กราฟ 24 ชม.</h3>
-<canvas id="chart24"></canvas>
-</div>
+# ==============================
+# ค่าสูงสุดรายวัน (2 วันล่าสุด)
+# ==============================
+daily_max = {}
+for t, v in zip(times_24h, values_24h):
+    day = t.strftime("%d/%m/%y")
+    if day not in daily_max:
+        daily_max[day] = []
+    daily_max[day].append(v)
 
-<div class="box">
-<h3>กราฟแสดงตลอด 1 ชม.</h3>
-<canvas id="chart1h"></canvas>
-</div>
+days = list(daily_max.keys())[-2:]
+max_values = [max(daily_max[d]) for d in days]
 
-<div class="box">
-<h3>กราฟต่อวันบันทึกค่าสูงสุด</h3>
-<canvas id="chartDaily"></canvas>
-</div>
+# ==============================
+# ตรวจสถานะ (ถ้ามีข้อมูลล่าสุด)
+# ==============================
+if len(values_24h) > 0:
+    system_status = "เปิด"
+    status_color = "green"
+else:
+    system_status = "ปิด"
+    status_color = "red"
 
-</div>
+# ==============================
+# สร้าง Layout ตามรูป
+# ==============================
+fig = plt.figure(figsize=(14,8))
+fig.patch.set_facecolor('#d9d9d9')
 
-<div class="status" id="status">กำลังโหลดข้อมูล...</div>
+gs = gridspec.GridSpec(2, 2, width_ratios=[1,2], height_ratios=[1,1])
 
-<script>
+# -------- กราฟ 24 ชม --------
+ax1 = fig.add_subplot(gs[0,0])
+ax1.plot(times_24h, values_24h)
+ax1.set_title("กราฟแสดง 24 ชม.", fontsize=12, fontweight='bold')
+ax1.set_facecolor("white")
+ax1.grid(True)
+for spine in ax1.spines.values():
+    spine.set_linewidth(3)
+    spine.set_color("black")
 
-const channelID = 3279862;
-const readAPI = "RW4WW5ICILK0P78L";
+# -------- กราฟ 1 ชม --------
+ax2 = fig.add_subplot(gs[:,1])
+ax2.plot(times_1h, values_1h)
+ax2.set_title("กราฟแสดงตลอด 1 ชม.", fontsize=12, fontweight='bold')
+ax2.set_facecolor("white")
+ax2.grid(True)
+for spine in ax2.spines.values():
+    spine.set_linewidth(3)
+    spine.set_color("black")
 
-function thaiDateTime(dateString){
-    let d = new Date(dateString);
-    return d.toLocaleString("th-TH",{
-        timeZone:"Asia/Bangkok",
-        year:"2-digit",
-        month:"2-digit",
-        day:"2-digit",
-        hour:"2-digit",
-        minute:"2-digit"
-    });
-}
+# -------- กราฟค่าสูงสุด --------
+ax3 = fig.add_subplot(gs[1,0])
+ax3.bar(days, max_values)
+ax3.set_title("กราฟต่อวันบันทึกค่าสูงสุด", fontsize=10, fontweight='bold')
+ax3.set_facecolor("white")
+ax3.grid(True)
+for spine in ax3.spines.values():
+    spine.set_linewidth(3)
+    spine.set_color("black")
 
-function createChart(ctx,type){
-    return new Chart(ctx,{
-        type:type,
-        data:{
-            labels:[],
-            datasets:[{
-                data:[],
-                borderColor:"#00ff00",
-                backgroundColor:"rgba(0,255,0,0.2)",
-                tension:0.3
-            }]
-        },
-        options:{
-            responsive:true,
-            plugins:{ legend:{ display:false } },
-            scales:{
-                x:{ ticks:{ color:"white" }},
-                y:{
-                    min:0,
-                    max:100,
-                    ticks:{ color:"white" }
-                }
-            }
-        }
-    });
-}
+# -------- หัวข้อใหญ่ --------
+fig.suptitle("SARAPHI TECHNICAL WIND SPEED MONITOR TEST\n(กราฟแสดงผล ทดสอบ)",
+             fontsize=18, fontweight="bold")
 
-const chart24 = createChart(document.getElementById("chart24"),"line");
-const chart1h = createChart(document.getElementById("chart1h"),"line");
-const chartDaily = createChart(document.getElementById("chartDaily"),"bar");
+# -------- สถานะ --------
+fig.text(0.5, 0.02,
+         f"สถานะการทำงาน : ( {system_status} )",
+         ha='center',
+         fontsize=14,
+         color=status_color,
+         fontweight="bold")
 
-async function updateCharts(){
-
-try{
-
-// -------- 24 ชั่วโมง --------
-let res24 = await fetch(`https://api.thingspeak.com/channels/${channelID}/feeds.json?api_key=${readAPI}&results=200`);
-let data24 = await res24.json();
-
-const labels24 = data24.feeds.map(f=>thaiDateTime(f.created_at));
-const values24 = data24.feeds.map(f=>Number(f.field1));
-
-chart24.data.labels = labels24;
-chart24.data.datasets[0].data = values24;
-chart24.update();
-
-
-// -------- 1 ชั่วโมง --------
-let oneHourAgo = new Date(Date.now() - 60*60*1000);
-
-const feeds1h = data24.feeds.filter(f=>{
-    return new Date(f.created_at) >= oneHourAgo;
-});
-
-if(feeds1h.length === 0){
-    chart1h.data.labels = ["ไม่มีข้อมูล"];
-    chart1h.data.datasets[0].data = [0];
-}else{
-    chart1h.data.labels = feeds1h.map(f=>thaiDateTime(f.created_at));
-    chart1h.data.datasets[0].data = feeds1h.map(f=>Number(f.field1));
-}
-
-chart1h.update();
-
-
-// -------- ค่าสูงสุดต่อวัน --------
-const grouped = {};
-
-data24.feeds.forEach(f=>{
-    const thaiDate = new Date(f.created_at)
-    .toLocaleDateString("th-TH",{timeZone:"Asia/Bangkok"});
-
-    const val = Number(f.field1);
-
-    if(!grouped[thaiDate] || val > grouped[thaiDate]){
-        grouped[thaiDate] = val;
-    }
-});
-
-chartDaily.data.labels = Object.keys(grouped);
-chartDaily.data.datasets[0].data = Object.values(grouped);
-chartDaily.update();
-
-
-// -------- เช็คสถานะ --------
-if(data24.feeds.length === 0){
-    document.getElementById("status").innerHTML = "⚠ ไม่มีข้อมูลจากเซิร์ฟเวอร์";
-    document.getElementById("status").style.color="orange";
-}else{
-    document.getElementById("status").innerHTML = "เชื่อมต่อปกติ";
-    document.getElementById("status").style.color="#00ff00";
-}
-
-}catch(e){
-
-document.getElementById("status").innerHTML = "⚠ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์";
-document.getElementById("status").style.color="orange";
-
-}
-
-}
-
-updateCharts();
-setInterval(updateCharts,10000);
-
-</script>
-
-</body>
-</html>
+plt.tight_layout(rect=[0,0.05,1,0.92])
+plt.show()
