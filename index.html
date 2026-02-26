@@ -1,153 +1,190 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>SARAPHI TECHNICAL WIND SPEED MONITOR TEST</title>
+<title>Wind Speed Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{
-    font-family: Arial, sans-serif;
-    background:#ffffff;
-    text-align:center;
+    margin:0;
+    font-family:Segoe UI;
+    background:#f4f6f9;
 }
-h1{margin-top:20px}
-.container{
-    width:95%;
-    margin:auto;
+
+.header{
+    background:#1f2937;
+    color:white;
+    padding:20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.status-box{
+    text-align:right;
+}
+
+.dashboard{
+    padding:20px;
     display:grid;
-    grid-template-columns: 1fr 2fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns:1fr 1fr;
     gap:20px;
 }
-.box{
-    border:4px solid black;
-    padding:10px;
+
+.card{
+    background:white;
+    border-radius:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    padding:15px;
 }
-.status{
-    margin-top:20px;
-    font-size:22px;
+
+.full{
+    grid-column:span 2;
+}
+
+canvas{
+    width:100%;
+    height:280px;
+}
+
+.footer{
+    text-align:center;
+    padding:15px;
     font-weight:bold;
 }
-canvas{
-    max-height:350px;
+
+.badge{
+    padding:5px 10px;
+    border-radius:20px;
+    font-size:14px;
+    color:white;
+}
+
+.normal{ background:green; }
+.warning{ background:orange; }
+.danger{ background:red; }
+
+.big-number{
+    font-size:28px;
 }
 </style>
 </head>
+
 <body>
 
-<h1>SARAPHI TECHNICAL WIND SPEED MONITOR TEST<br>
-<small>(กราฟแสดงผล ทดสอบ)</small></h1>
-
-<div class="container">
-    <div class="box">
-        <h3>กราฟแสดง 24 ชม.</h3>
-        <canvas id="chart24"></canvas>
+<div class="header">
+    <div>
+        <h2>SARAPHI TECHNICAL</h2>
+        Wind Speed Monitoring System
     </div>
 
-    <div class="box" style="grid-row: span 2;">
-        <h3>กราฟแสดงตลอด 1 ชม.</h3>
-        <canvas id="chart1h"></canvas>
-    </div>
-
-    <div class="box">
-        <h3>กราฟต่อวันบันทึกค่าสูงสุด</h3>
-        <canvas id="chartDay"></canvas>
+    <div class="status-box">
+        <div class="big-number">Current Wind: <b id="currentWind">0</b> m/s</div>
+        <div>Status: <span id="statusBadge" class="badge normal">NORMAL</span></div>
     </div>
 </div>
 
-<div class="status" id="status">สถานะการทำงาน : ( กำลังโหลด... )</div>
+<div class="dashboard">
+
+    <div class="card">
+        <h3>24 ชั่วโมง (ค่าสูงสุดรายชั่วโมง)</h3>
+        <canvas id="chart24"></canvas>
+    </div>
+
+    <div class="card">
+        <h3>5 นาทีล่าสุด</h3>
+        <canvas id="chart5m"></canvas>
+    </div>
+
+    <div class="card full">
+        <h3>ค่าสูงสุดรายวัน (7 วัน)</h3>
+        <canvas id="chart7d"></canvas>
+    </div>
+
+</div>
+
+<div class="footer">
+สถานะการทำงาน: ONLINE | Demo Mode
+</div>
 
 <script>
-const CHANNEL_ID = "3279862";
-const READ_API_KEY = "ใส่_READ_API_KEY_ตรงนี้";
-const FIELD = 1;
 
-async function loadData(){
-    const res = await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${READ_API_KEY}&results=300`);
-    const data = await res.json();
+// ====== สร้างข้อมูลปลอม ======
 
-    let times = [];
-    let values = [];
+function randomData(length, max){
+    return Array.from({length}, () => Math.floor(Math.random()*max));
+}
 
-    data.feeds.forEach(f=>{
-        if(f[`field${FIELD}`]){
-            const utc = new Date(f.created_at);
-            const thai = new Date(utc.getTime() + (7*60*60*1000));
-            times.push(thai);
-            values.push(parseFloat(f[`field${FIELD}`]));
-        }
-    });
+// 24 ชั่วโมง (24 ค่า)
+let data24 = randomData(24, 60);
+let labels24 = Array.from({length:24}, (_,i)=> i+":00");
 
-    // ===== 1 ชั่วโมงล่าสุด =====
-    const now = new Date();
-    const oneHourAgo = now - 3600000;
-    let times1h = [];
-    let values1h = [];
+// 5 นาทีล่าสุด (20 ค่า)
+let data5m = randomData(20, 50);
+let labels5m = Array.from({length:20}, (_,i)=> i);
 
-    times.forEach((t,i)=>{
-        if(t >= oneHourAgo){
-            times1h.push(t.toLocaleTimeString("th-TH"));
-            values1h.push(values[i]);
-        }
-    });
+// 7 วัน
+let data7d = randomData(7, 80);
+let labels7d = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-    // ===== ค่าสูงสุดรายวัน =====
-    let dailyMax = {};
-    times.forEach((t,i)=>{
-        let d = t.toLocaleDateString("th-TH");
-        if(!dailyMax[d] || values[i] > dailyMax[d]){
-            dailyMax[d] = values[i];
-        }
-    });
+// ====== สร้างกราฟ ======
 
-    // ===== สถานะ =====
-    const status = values.length > 0 ? "เปิด" : "ปิด";
-    document.getElementById("status").innerHTML =
-        `สถานะการทำงาน : ( ${status} )`;
-
-    // ===== กราฟ 24 ชม =====
-    new Chart(document.getElementById("chart24"),{
-        type:"line",
+function makeChart(id, labels, data){
+    return new Chart(document.getElementById(id),{
+        type:'line',
         data:{
-            labels: times.map(t=>t.toLocaleTimeString("th-TH")),
-            datasets:[{data:values}]
+            labels:labels,
+            datasets:[{
+                data:data,
+                borderWidth:2,
+                tension:0.3,
+                fill:false
+            }]
         },
         options:{
-            plugins:{legend:{display:false}},
-            scales:{y:{beginAtZero:true}}
-        }
-    });
-
-    // ===== กราฟ 1 ชม =====
-    new Chart(document.getElementById("chart1h"),{
-        type:"line",
-        data:{
-            labels: times1h,
-            datasets:[{data:values1h}]
-        },
-        options:{
-            plugins:{legend:{display:false}},
-            scales:{y:{beginAtZero:true}}
-        }
-    });
-
-    // ===== กราฟรายวัน =====
-    new Chart(document.getElementById("chartDay"),{
-        type:"bar",
-        data:{
-            labels:Object.keys(dailyMax),
-            datasets:[{data:Object.values(dailyMax)}]
-        },
-        options:{
-            plugins:{legend:{display:false}},
-            scales:{y:{beginAtZero:true}}
+            responsive:true,
+            plugins:{
+                legend:{display:false}
+            },
+            scales:{
+                y:{beginAtZero:true}
+            }
         }
     });
 }
 
-loadData();
-setInterval(loadData, 30000); // รีเฟรชทุก 30 วิ
+makeChart("chart24", labels24, data24);
+makeChart("chart5m", labels5m, data5m);
+makeChart("chart7d", labels7d, data7d);
+
+// ====== จำลองค่า Current Wind ======
+
+function updateWind(){
+    let value = Math.floor(Math.random()*70);
+    document.getElementById("currentWind").innerText = value;
+
+    let badge = document.getElementById("statusBadge");
+
+    if(value < 30){
+        badge.className = "badge normal";
+        badge.innerText = "NORMAL";
+    }
+    else if(value < 50){
+        badge.className = "badge warning";
+        badge.innerText = "WARNING";
+    }
+    else{
+        badge.className = "badge danger";
+        badge.innerText = "DANGER";
+    }
+}
+
+setInterval(updateWind,2000);
+updateWind();
+
 </script>
 
 </body>
 </html>
+cdn.jsdelivr.net
