@@ -1,163 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Wind Dashboard – Saraphi Technical</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wind Monitoring</title>
 
 <style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#ffffff;
+  --sub:#94a3b8;
+  --btn:#334155;
+}
+
 body{
-    margin:0;
-    font-family:Segoe UI;
-    background:#f4f6f9;
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:0.3s;
 }
-.header{
-    background:#1f2937;
-    color:white;
-    padding:10px 20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px 25px;
+  background:var(--card);
 }
-.dashboard{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-template-rows:1fr 1fr;
-    gap:10px;
-    padding:10px;
+
+button{
+  padding:8px 15px;
+  border:none;
+  border-radius:20px;
+  background:var(--btn);
+  color:white;
+  cursor:pointer;
 }
+
 .card{
-    background:white;
-    border-radius:12px;
-    padding:10px;
+  background:var(--card);
+  margin:20px;
+  padding:20px;
+  border-radius:15px;
+  transition:0.3s;
 }
-.card.full{
-    grid-column:span 2;
+
+.light{
+  --bg:#ffffff;
+  --card:#f1f5f9;
+  --text:#111827;
+  --sub:#475569;
+  --btn:#e2e8f0;
 }
-.chart-wrap{
-    height:250px;
-}
-.badge{
-    padding:4px 10px;
-    border-radius:20px;
-    font-size:12px;
-    font-weight:bold;
-}
-.normal{background:#16a34a;color:white;}
-.warning{background:#d97706;color:white;}
-.danger{background:#dc2626;color:white;}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-    <div>
-        <strong>SARAPHI TECHNICAL</strong>
-        <div style="font-size:12px;">Wind Monitoring System</div>
-    </div>
-    <div>
-        Wind: <b id="windValue">–</b> m/s
-        <span id="statusBadge" class="badge normal">NORMAL</span>
-    </div>
-</div>
+<header>
+  <h2>SARAPHI TECHNICAL</h2>
+  <button id="modeBtn" onclick="toggleMode()">Light Mode</button>
+</header>
 
-<div class="dashboard">
-
-    <div class="card">
-        <h4>24 ชั่วโมงล่าสุด</h4>
-        <div class="chart-wrap"><canvas id="chart24"></canvas></div>
-    </div>
-
-    <div class="card">
-        <h4>5 นาทีล่าสุด</h4>
-        <div class="chart-wrap"><canvas id="chart5m"></canvas></div>
-    </div>
-
-    <div class="card full">
-        <h4>ย้อนหลัง 7 วัน</h4>
-        <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
-    </div>
-
+<div class="card">
+  <h3>ตัวอย่างการ์ด</h3>
+  <p>เมื่อกดปุ่มจะเปลี่ยนธีมขาว/ดำ และข้อความปุ่มจะสลับ</p>
 </div>
 
 <script>
-const CHANNEL_ID = "3279862";
-const READ_KEY   = "RW4WW5ICILK0P78L";
-const FIELD      = "field1";
+function toggleMode(){
+  const body = document.body;
+  const btn = document.getElementById("modeBtn");
 
-function createChart(id,color){
-    return new Chart(document.getElementById(id),{
-        type:'line',
-        data:{labels:[],datasets:[{
-            data:[],
-            borderColor:color,
-            backgroundColor:color,
-            fill:false,
-            tension:0.3
-        }]},
-        options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            plugins:{legend:{display:false}},
-            scales:{y:{beginAtZero:true,max:90}}
-        }
-    });
+  body.classList.toggle("light");
+
+  if(body.classList.contains("light")){
+    btn.innerText = "Dark Mode";
+  }else{
+    btn.innerText = "Light Mode";
+  }
 }
-
-const chart24=createChart("chart24","#3b82f6");
-const chart5m=createChart("chart5m","#10b981");
-const chart7d=createChart("chart7d","#f59e0b");
-
-function updateBadge(val){
-    document.getElementById("windValue").innerText=
-        val?val.toFixed(1):"–";
-    const b=document.getElementById("statusBadge");
-    if(!val){b.className="badge normal";b.innerText="NO DATA";return;}
-    if(val<30){b.className="badge normal";b.innerText="NORMAL";}
-    else if(val<50){b.className="badge warning";b.innerText="WARNING";}
-    else{b.className="badge danger";b.innerText="DANGER";}
-}
-
-async function fetchData(minutes,chart){
-    try{
-        const url=`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${READ_KEY}&minutes=${minutes}&results=1000`;
-        const res=await fetch(url);
-        const json=await res.json();
-        const feeds=json.feeds||[];
-
-        const labels=[];
-        const data=[];
-        feeds.forEach(f=>{
-            if(f[FIELD]){
-                const t=new Date(f.created_at);
-                labels.push(t.getHours()+":"+String(t.getMinutes()).padStart(2,"0"));
-                data.push(parseFloat(f[FIELD]));
-            }
-        });
-
-        chart.data.labels=labels;
-        chart.data.datasets[0].data=data;
-        chart.update();
-
-        if(minutes===5 && data.length){
-            updateBadge(data[data.length-1]);
-        }
-
-    }catch(e){
-        console.log("Fetch error:",e);
-    }
-}
-
-function fetch7days(){
-    fetchData(10080,chart7d);
-}
-
-fetchData(1440,chart24);
-fetchData(5,chart5m);
-fetch7days();
-
-setInterval(()=>fetchData(5,chart5m),15000);
 </script>
 
 </body>
