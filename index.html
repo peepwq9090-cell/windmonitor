@@ -1,181 +1,164 @@
-<script>
-/* ===== CONFIG ===== */
-const CH    = '3279862';
-const RKEY  = 'RW4WW5ICILK0P78L';
-const BASE  = `https://api.thingspeak.com/channels/${CH}`;
-const FIELD = 'field1';
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Wind Dashboard – Saraphi Technical</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-/* ===== CHART FACTORY ===== */
-function mkChart(id, color, extraOpts = {}){
-    return new Chart(document.getElementById(id), {
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:#f4f6f9;
+}
+.header{
+    background:#1f2937;
+    color:white;
+    padding:10px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.dashboard{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;
+    gap:10px;
+    padding:10px;
+}
+.card{
+    background:white;
+    border-radius:12px;
+    padding:10px;
+}
+.card.full{
+    grid-column:span 2;
+}
+.chart-wrap{
+    height:250px;
+}
+.badge{
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:bold;
+}
+.normal{background:#16a34a;color:white;}
+.warning{background:#d97706;color:white;}
+.danger{background:#dc2626;color:white;}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <div>
+        <strong>SARAPHI TECHNICAL</strong>
+        <div style="font-size:12px;">Wind Monitoring System</div>
+    </div>
+    <div>
+        Wind: <b id="windValue">–</b> m/s
+        <span id="statusBadge" class="badge normal">NORMAL</span>
+    </div>
+</div>
+
+<div class="dashboard">
+
+    <div class="card">
+        <h4>24 ชั่วโมงล่าสุด</h4>
+        <div class="chart-wrap"><canvas id="chart24"></canvas></div>
+    </div>
+
+    <div class="card">
+        <h4>5 นาทีล่าสุด</h4>
+        <div class="chart-wrap"><canvas id="chart5m"></canvas></div>
+    </div>
+
+    <div class="card full">
+        <h4>ย้อนหลัง 7 วัน</h4>
+        <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
+    </div>
+
+</div>
+
+<script>
+const CHANNEL_ID = "3279862";
+const READ_KEY   = "RW4WW5ICILK0P78L";
+const FIELD      = "field1";
+
+function createChart(id,color){
+    return new Chart(document.getElementById(id),{
         type:'line',
-        data:{
-            labels:[],
-            datasets:[{
-                data:[],
-                borderColor: color,
-                backgroundColor: color.replace('1)', '0.12)'),
-                borderWidth:2,
-                tension:0.3,
-                fill:true,
-                pointRadius:3,
-                spanGaps:false
-            }]
-        },
+        data:{labels:[],datasets:[{
+            data:[],
+            borderColor:color,
+            backgroundColor:color,
+            fill:false,
+            tension:0.3
+        }]},
         options:{
             responsive:true,
             maintainAspectRatio:false,
-            animation:{ duration:400 },
-            plugins:{ legend:{ display:false } },
-            scales:{
-                y:{ beginAtZero:true, max:90 },
-                x:{ ticks:{ maxTicksLimit: extraOpts.maxTicks || 12 } }
-            }
+            plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,max:90}}
         }
     });
 }
 
-const c24 = mkChart('chart24', 'rgba(59,130,246,1)');
-const c5m = mkChart('chart5m', 'rgba(16,185,129,1)');
-const c7d = mkChart('chart7d', 'rgba(245,158,11,1)');
+const chart24=createChart("chart24","#3b82f6");
+const chart5m=createChart("chart5m","#10b981");
+const chart7d=createChart("chart7d","#f59e0b");
 
-function applyChart(chart, labels, data){
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = data;
-    chart.update();
-}
-
-/* ===== FILL TIMELINE ===== */
-function fillTimeline(feeds, slotMs, totalSlots){
-    const now   = Date.now();
-    const start = now - (totalSlots - 1) * slotMs;
-    const slots = new Array(totalSlots).fill(0);
-
-    feeds.forEach(f=>{
-        const t   = new Date(f.created_at).getTime();
-        const idx = Math.round((t - start) / slotMs);
-        if(idx>=0 && idx<totalSlots){
-            const v = parseFloat(f[FIELD]);
-            if(!isNaN(v)) slots[idx] = Math.max(slots[idx], v);
-        }
-    });
-
-    const times = Array.from({length: totalSlots}, (_,i)=> new Date(start+i*slotMs));
-    return { slots, times };
-}
-
-/* ===== FORMAT ===== */
-function fmtH(t){ return `${t.getHours()}.00`; }
-
-function fmtHM(t){
-    return `${String(t.getHours()).padStart(2,'0')}.${String(t.getMinutes()).padStart(2,'0')}`;
-}
-
-/* ===== BADGE ===== */
 function updateBadge(val){
-    document.getElementById('windValue').innerText =
-        (val!==null)? val.toFixed(1) : '–';
-
-    const b=document.getElementById('statusBadge');
-
-    if(val===null){ b.className='badge normal'; b.innerText='NO DATA'; return; }
-    if(val<30){ b.className='badge normal'; b.innerText='NORMAL'; }
-    else if(val<50){ b.className='badge warning'; b.innerText='WARNING'; }
-    else{ b.className='badge danger'; b.innerText='DANGER'; }
+    document.getElementById("windValue").innerText=
+        val?val.toFixed(1):"–";
+    const b=document.getElementById("statusBadge");
+    if(!val){b.className="badge normal";b.innerText="NO DATA";return;}
+    if(val<30){b.className="badge normal";b.innerText="NORMAL";}
+    else if(val<50){b.className="badge warning";b.innerText="WARNING";}
+    else{b.className="badge danger";b.innerText="DANGER";}
 }
 
-/* ===== CONNECTION ===== */
-function setConn(ok,timeStr){
-    const dot=document.getElementById('connDot');
-    const lbl=document.getElementById('connLabel');
-    const ls=document.getElementById('lastSeen');
-
-    if(ok){
-        dot.className='conn-dot';
-        lbl.className='conn-label ok';
-        lbl.innerText='( เปิด )';
-        ls.innerText=timeStr?`· อัปเดต ${timeStr}`:'';
-    }else{
-        dot.className='conn-dot off';
-        lbl.className='conn-label fail';
-        lbl.innerText='( ปิด )';
-        ls.innerText=timeStr?`· ข้อมูลล่าสุด ${timeStr}`:'· ไม่มีข้อมูล';
-    }
-}
-
-/* ===== FETCH 5 MIN ===== */
-async function fetch5m(){
+async function fetchData(minutes,chart){
     try{
-        const url = `${BASE}/feeds.json?api_key=${RKEY}&minutes=5&results=8000`;
-        const res = await fetch(url);
-        const json= await res.json();
-        const feeds=(json.feeds||[]).filter(f=>f[FIELD]);
+        const url=`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${READ_KEY}&minutes=${minutes}&results=1000`;
+        const res=await fetch(url);
+        const json=await res.json();
+        const feeds=json.feeds||[];
 
-        const {slots,times}=fillTimeline(feeds,30000,10);
-        applyChart(c5m,times.map(fmtHM),slots);
+        const labels=[];
+        const data=[];
+        feeds.forEach(f=>{
+            if(f[FIELD]){
+                const t=new Date(f.created_at);
+                labels.push(t.getHours()+":"+String(t.getMinutes()).padStart(2,"0"));
+                data.push(parseFloat(f[FIELD]));
+            }
+        });
 
-        if(feeds.length){
-            const last=feeds[feeds.length-1];
-            const lastDt=new Date(last.created_at);
-            const secAgo=(Date.now()-lastDt.getTime())/1000;
-            const ok=secAgo<=60;
-            updateBadge(ok?parseFloat(last[FIELD]):null);
-            setConn(ok,lastDt.toLocaleTimeString('th-TH'));
-        }else{
-            updateBadge(null);
-            setConn(false,null);
+        chart.data.labels=labels;
+        chart.data.datasets[0].data=data;
+        chart.update();
+
+        if(minutes===5 && data.length){
+            updateBadge(data[data.length-1]);
         }
 
     }catch(e){
-        console.error(e);
-        updateBadge(null);
-        setConn(false,null);
+        console.log("Fetch error:",e);
     }
 }
 
-/* ===== FETCH 24H ===== */
-async function fetch24h(){
-    try{
-        const url=`${BASE}/feeds.json?api_key=${RKEY}&minutes=1440&results=8000`;
-        const res=await fetch(url);
-        const json=await res.json();
-        const feeds=(json.feeds||[]).filter(f=>f[FIELD]);
-
-        const {slots,times}=fillTimeline(feeds,3600000,24);
-        applyChart(c24,times.map(fmtH),slots);
-
-    }catch(e){ console.error(e); }
+function fetch7days(){
+    fetchData(10080,chart7d);
 }
 
-/* ===== FETCH 7D ===== */
-async function fetch7d(){
-    try{
-        const url=`${BASE}/feeds.json?api_key=${RKEY}&days=7&results=8000`;
-        const res=await fetch(url);
-        const json=await res.json();
-        const feeds=(json.feeds||[]).filter(f=>f[FIELD]);
+fetchData(1440,chart24);
+fetchData(5,chart5m);
+fetch7days();
 
-        const {slots,times}=fillTimeline(feeds,86400000,7);
-        const DAY=['อา','จ','อ','พ','พฤ','ศ','ส'];
-        const labels=times.map(t=>`${DAY[t.getDay()]} ${t.getDate()}/${t.getMonth()+1}`);
-        applyChart(c7d,labels,slots);
-
-    }catch(e){ console.error(e); }
-}
-
-/* ===== START ===== */
-fetch5m();
-fetch24h();
-fetch7d();
-
-setInterval(fetch5m,15000);
-setInterval(fetch24h,300000);
-setInterval(fetch7d,1800000);
-
-/* ===== DARK MODE ===== */
-function toggleDark(){
-    const isDark=document.body.classList.toggle('dark');
-    document.getElementById('toggleBtn').innerText=
-        isDark?'☀️ Light Mode':'🌙 Dark Mode';
-}
+setInterval(()=>fetchData(5,chart5m),15000);
 </script>
+
+</body>
+</html>
