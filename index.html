@@ -3,84 +3,182 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wind Monitoring</title>
+<title>SARAPHI TECHNICAL</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root{
   --bg:#0f172a;
   --card:#1e293b;
   --text:#ffffff;
-  --sub:#94a3b8;
-  --btn:#334155;
+  --grid:rgba(255,255,255,0.1);
+}
+
+body.light{
+  --bg:#f1f5f9;
+  --card:#ffffff;
+  --text:#111827;
+  --grid:rgba(0,0,0,0.1);
 }
 
 body{
   margin:0;
-  font-family:Arial, Helvetica, sans-serif;
+  font-family:sans-serif;
   background:var(--bg);
   color:var(--text);
-  transition:0.3s;
+  transition:.3s;
 }
 
-header{
+.header{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:15px 25px;
-  background:var(--card);
+  padding:15px 30px;
+  background:#0b1220;
 }
 
-button{
-  padding:8px 15px;
-  border:none;
-  border-radius:20px;
-  background:var(--btn);
-  color:white;
-  cursor:pointer;
+body.light .header{
+  background:#e2e8f0;
+}
+
+.container{
+  padding:20px;
 }
 
 .card{
   background:var(--card);
-  margin:20px;
   padding:20px;
-  border-radius:15px;
-  transition:0.3s;
+  border-radius:12px;
+  margin-bottom:20px;
 }
 
-.light{
-  --bg:#ffffff;
-  --card:#f1f5f9;
-  --text:#111827;
-  --sub:#475569;
-  --btn:#e2e8f0;
+.row{
+  display:flex;
+  gap:20px;
+}
+
+.row .card{
+  flex:1;
+}
+
+button{
+  padding:8px 16px;
+  border:none;
+  border-radius:20px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<header>
+<div class="header">
   <h2>SARAPHI TECHNICAL</h2>
-  <button id="modeBtn" onclick="toggleMode()">Light Mode</button>
-</header>
+  <button onclick="toggleMode()" id="modeBtn">Light Mode</button>
+</div>
 
-<div class="card">
-  <h3>ตัวอย่างการ์ด</h3>
-  <p>เมื่อกดปุ่มจะเปลี่ยนธีมขาว/ดำ และข้อความปุ่มจะสลับ</p>
+<div class="container">
+
+  <div class="row">
+    <div class="card">
+      <h4>สถิติรายชั่วโมง (24 ชั่วโมงล่าสุด)</h4>
+      <canvas id="chart1"></canvas>
+    </div>
+
+    <div class="card">
+      <h4>ค่าปัจจุบันแบบเรียลไทม์ (5 นาทีล่าสุด)</h4>
+      <canvas id="chart2"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>สถิติสูงสุดรายวัน (ย้อนหลัง 1 สัปดาห์)</h4>
+    <canvas id="chart3"></canvas>
+  </div>
+
 </div>
 
 <script>
+function textColor(){
+  return getComputedStyle(document.body).getPropertyValue('--text');
+}
+
+function gridColor(){
+  return getComputedStyle(document.body).getPropertyValue('--grid');
+}
+
+function createChart(id, data, color){
+  return new Chart(document.getElementById(id),{
+    type:'line',
+    data:{
+      labels:data.labels,
+      datasets:[{
+        data:data.values,
+        borderColor:color,
+        backgroundColor:color,
+        tension:.4,
+        fill:false
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false}
+      },
+      scales:{
+        x:{
+          ticks:{color:textColor()},
+          grid:{color:gridColor()}
+        },
+        y:{
+          ticks:{color:textColor()},
+          grid:{color:gridColor()}
+        }
+      }
+    }
+  });
+}
+
+const chart1 = createChart("chart1",
+{
+  labels:["10","12","14","16","18","20","22","0","2","4","6","8"],
+  values:[0,0,0,0,0,80,0,50,50,0,45,0]
+},"#3b82f6");
+
+const chart2 = createChart("chart2",
+{
+  labels:["09:28","09:29","09:30","09:31","09:32","09:33"],
+  values:[0,0,0,0,0,0]
+},"#10b981");
+
+const chart3 = createChart("chart3",
+{
+  labels:["21/2","22/2","23/2","24/2","25/2","26/2","27/2"],
+  values:[0,0,0,0,0,0,85]
+},"orange");
+
 function toggleMode(){
-  const body = document.body;
-  const btn = document.getElementById("modeBtn");
+  document.body.classList.toggle("light");
+  const btn=document.getElementById("modeBtn");
 
-  body.classList.toggle("light");
-
-  if(body.classList.contains("light")){
-    btn.innerText = "Dark Mode";
+  if(document.body.classList.contains("light")){
+    btn.innerText="Dark Mode";
   }else{
-    btn.innerText = "Light Mode";
+    btn.innerText="Light Mode";
   }
+
+  updateCharts();
+}
+
+function updateCharts(){
+  [chart1,chart2,chart3].forEach(c=>{
+    c.options.scales.x.ticks.color=textColor();
+    c.options.scales.y.ticks.color=textColor();
+    c.options.scales.x.grid.color=gridColor();
+    c.options.scales.y.grid.color=gridColor();
+    c.update();
+  });
 }
 </script>
 
