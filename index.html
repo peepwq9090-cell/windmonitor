@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wind Dashboard – Saraphi Technical</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
 <style>
 *{ box-sizing:border-box; margin:0; padding:0; }
@@ -35,9 +36,6 @@ html, body{
     min-height:100%;
 }
 
-/* =====================
-   DESKTOP: ไม่ scroll
-   ===================== */
 @media (min-width: 769px){
     html, body{
         height:100%;
@@ -57,9 +55,6 @@ html, body{
     .chart-wrap{ flex:1; position:relative; min-height:0; }
 }
 
-/* =====================
-   MOBILE: เลื่อนได้ 3 ชั้น
-   ===================== */
 @media (max-width: 768px){
     html, body{
         overflow-y:auto;
@@ -86,11 +81,10 @@ html, body{
     .card.full{ grid-column:unset; }
     .chart-wrap{
         position:relative;
-        height:200px;
+        height:220px; /* เพิ่มความสูงเล็กน้อยเพื่อให้เลขไม่ซ้อน */
     }
 }
 
-/* ===== HEADER ===== */
 .header{
     background:var(--header);
     color:white;
@@ -134,7 +128,6 @@ html, body{
     border:none;
 }
 
-/* ===== CARD ===== */
 .card{
     background:var(--card);
     border-radius:12px;
@@ -156,7 +149,6 @@ html, body{
 .card h3{ font-size:12px; font-weight:600; color:var(--text); }
 .card .unit{ font-size:11px; color:var(--subtext); }
 
-/* ===== CONNECTION STATUS ===== */
 .conn-bar{
     flex-shrink:0;
     margin-top:6px;
@@ -187,10 +179,17 @@ html, body{
     width:11px; height:11px;
     border-radius:50%;
     background:#16a34a;
+    animation:pulse-g 2s infinite;
+    flex-shrink:0;
 }
-
 .conn-dot.off{
     background:#dc2626;
+    animation:none;
+}
+@keyframes pulse-g{
+    0%  { box-shadow:0 0 0 0 rgba(22,163,74,0.6); }
+    70% { box-shadow:0 0 0 7px rgba(22,163,74,0); }
+    100%{ box-shadow:0 0 0 0 rgba(22,163,74,0); }
 }
 
 #lastSeen{ font-size:11px; color:var(--subtext); }
@@ -247,17 +246,17 @@ html, body{
 </div>
 
 <script>
-
 /* ===== CONFIG ===== */
 const CH    = '3279862';
 const RKEY  = 'RW4WW5ICILK0P78L';
 const BASE  = `https://api.thingspeak.com/channels/${CH}`;
 const FIELD = 'field1';
 
-/* ===== CHART FACTORY ===== */
+/* ===== CHART FACTORY (แก้ไขใหม่: แสดงเลขตลอดเวลา + Max 50) ===== */
 function mkChart(id, color, extraOpts = {}){
     return new Chart(document.getElementById(id), {
         type:'line',
+        plugins: [ChartDataLabels], // เรียกใช้ Plugin แสดงเลข
         data:{
             labels:[],
             datasets:[{
@@ -267,26 +266,40 @@ function mkChart(id, color, extraOpts = {}){
                 borderWidth:2,
                 tension:0.3,
                 fill:true,
-                pointRadius:3,
+                pointRadius:4,
                 spanGaps:false
             }]
         },
         options:{
             responsive:true,
             maintainAspectRatio:false,
+            layout: {
+                padding: { top: 25, left: 5, right: 15, bottom: 5 } // เผื่อที่ให้ตัวเลขไม่ขาด
+            },
             animation:{ duration:400 },
-            plugins:{ legend:{ display:false } },
+            plugins:{ 
+                legend:{ display:false },
+                datalabels: { // ตั้งค่าการแสดงตัวเลข
+                    align: 'top',
+                    anchor: 'end',
+                    offset: 2,
+                    color: '#888',
+                    font: { weight: 'bold', size: 10 },
+                    formatter: (value) => value > 0 ? value.toFixed(1) : '' 
+                },
+                tooltip: { enabled: true } // ยังเก็บ tooltip ไว้ดูเวลาเอาเมาส์จี้
+            },
             scales:{
                 y:{
                     beginAtZero:true,
-                    max:50,
+                    max: 50, // ปรับค่าสูงสุดเป็น 50
                     ticks:{ font:{ size:10 } }
                 },
                 x:{
                     ticks:{
                         font:{ size:10 },
                         maxRotation:45,
-                        autoSkip:false,
+                        autoSkip:true,
                         maxTicksLimit: extraOpts.maxTicks || 12
                     }
                 }
@@ -299,11 +312,115 @@ const c24 = mkChart('chart24', 'rgba(59,130,246,1)',  { maxTicks:12 });
 const c5m = mkChart('chart5m', 'rgba(16,185,129,1)',  { maxTicks:10 });
 const c7d = mkChart('chart7d', 'rgba(245,158,11,1)',  { maxTicks:7  });
 
+function applyChart(chart, labels, data){
+    chart.data.labels           = labels;
+    chart.data.datasets[0].data = data;
+    chart.update();
+}
+
+function fillTimeline(feeds, slotMs, totalSlots){
+    const now   = Date.now();
+    const start = now - (totalSlots - 1) * slotMs;
+    const slots = new Array(totalSlots).fill(0);
+
+    feeds.forEach(f => {
+        const t   = new Date(f.created_at).getTime();
+        const idx = Math.round((t - start) / slotMs);
+        if(idx >= 0 && idx < totalSlots){
+            const v = parseFloat(f[FIELD]);
+            if(!isNaN(v)) slots[idx] = Math.max(slots[idx], v);
+        }
+    });
+
+    const times = Array.from({length: totalSlots}, (_,i) => new Date(start + i * slotMs));
+    return { slots, times };
+}
+
+function fmtH(t){ return `${t.getHours()}.00`; }
+
+function updateBadge(val){
+    document.getElementById('windValue').innerText = (val !== null) ? val.toFixed(1) : '–';
+    const b = document.getElementById('statusBadge');
+    if(val === null){ b.className='badge normal'; b.innerText='NO DATA'; return; }
+    if(val < 30)    { b.className='badge normal';  b.innerText='NORMAL'; }
+    else if(val<50) { b.className='badge warning'; b.innerText='WARNING'; }
+    else            { b.className='badge danger';  b.innerText='DANGER'; }
+}
+
+function setConn(ok, timeStr){
+    const dot = document.getElementById('connDot');
+    const lbl = document.getElementById('connLabel');
+    const ls  = document.getElementById('lastSeen');
+    if(ok){
+        dot.className = 'conn-dot';
+        lbl.className = 'conn-label ok';
+        lbl.innerText = '( เปิด )';
+        ls.innerText  = timeStr ? `· อัปเดต ${timeStr}` : '';
+    } else {
+        dot.className = 'conn-dot off';
+        lbl.className = 'conn-label fail';
+        lbl.innerText = '( ปิด )';
+        ls.innerText  = timeStr ? `· ข้อมูลล่าสุด ${timeStr}` : '· ไม่มีข้อมูล';
+    }
+}
+
+async function fetch5m(){
+    try {
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=5&results=8000`);
+        const json  = await res.json();
+        const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
+
+        const { slots, times } = fillTimeline(feeds, 30000, 10);
+        const labels = times.map(t =>
+            `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`
+        );
+        applyChart(c5m, labels, slots);
+
+        if(feeds.length > 0){
+            const last   = feeds[feeds.length - 1];
+            const lastDt = new Date(last.created_at);
+            const secAgo = (Date.now() - lastDt.getTime()) / 1000;
+            const ok     = secAgo <= 15;
+            updateBadge(ok ? parseFloat(last[FIELD]) : null);
+            setConn(ok, lastDt.toLocaleTimeString('th-TH'));
+        } else {
+            updateBadge(null); setConn(false, null);
+        }
+    } catch(e){
+        setConn(false, null); updateBadge(null);
+    }
+}
+
+async function fetch24h(){
+    try {
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=1440&results=8000`);
+        const json  = await res.json();
+        const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
+        const { slots, times } = fillTimeline(feeds, 3600000, 24);
+        applyChart(c24, times.map(t => fmtH(t)), slots);
+    } catch(e){ console.error(e); }
+}
+
+async function fetch7d(){
+    try {
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&days=7&results=8000`);
+        const json  = await res.json();
+        const feeds = (json.feeds || []).filter(f => f[FIELD] !== null && f[FIELD] !== '');
+        const { slots, times } = fillTimeline(feeds, 86400000, 7);
+        const DAY = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+        applyChart(c7d, times.map(t => `${DAY[t.getDay()]} ${t.getDate()}/${t.getMonth()+1}`), slots);
+    } catch(e){ console.error(e); }
+}
+
+fetch5m(); fetch24h(); fetch7d();
+setInterval(fetch5m,  15 * 1000);
+setInterval(fetch24h,  5 * 60 * 1000);
+setInterval(fetch7d,  30 * 60 * 1000);
+
 function toggleDark(){
     const isDark = document.body.classList.toggle('dark');
     document.getElementById('toggleBtn').innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
-
 </script>
 </body>
 </html>
