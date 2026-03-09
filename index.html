@@ -90,6 +90,7 @@ html, body{
     }
 }
 
+/* ===== HEADER ===== */
 .header{
     background:var(--header);
     color:white;
@@ -99,7 +100,6 @@ html, body{
     align-items:center;
     flex-shrink:0;
 }
-
 .header-title .sub{ font-size:11px; opacity:0.8; margin-top:2px; }
 .header-right{ display:flex; align-items:center; gap:12px; }
 
@@ -109,7 +109,6 @@ html, body{
     padding:4px 12px;
     border-radius:8px;
 }
-
 .wind-display b{ font-size:20px; }
 
 .badge{
@@ -118,8 +117,8 @@ html, body{
     font-size:12px;
     font-weight:600;
     color:white;
+    letter-spacing:0.5px;
 }
-
 .normal { background:#16a34a; }
 .warning{ background:#d97706; }
 .danger { background:#dc2626; }
@@ -135,6 +134,7 @@ html, body{
     border:none;
 }
 
+/* ===== CARD ===== */
 .card{
     background:var(--card);
     border-radius:12px;
@@ -142,8 +142,8 @@ html, body{
     padding:8px 10px;
     display:flex;
     flex-direction:column;
+    transition:background 0.3s;
 }
-
 .card.full{ grid-column:span 2; }
 
 .card-header{
@@ -153,10 +153,10 @@ html, body{
     flex-shrink:0;
     margin-bottom:4px;
 }
-
 .card h3{ font-size:12px; font-weight:600; color:var(--text); }
 .card .unit{ font-size:11px; color:var(--subtext); }
 
+/* ===== CONNECTION STATUS ===== */
 .conn-bar{
     flex-shrink:0;
     margin-top:6px;
@@ -172,19 +172,19 @@ html, body{
 .conn-label{
     font-size:15px;
     font-weight:700;
+    letter-spacing:0.3px;
 }
-
 .conn-label.ok  { color:#16a34a; }
 .conn-label.fail{ color:#dc2626; }
 
 .conn-title{
     font-size:14px;
     color:var(--subtext);
+    font-weight:500;
 }
 
 .conn-dot{
-    width:11px;
-    height:11px;
+    width:11px; height:11px;
     border-radius:50%;
     background:#16a34a;
 }
@@ -200,117 +200,110 @@ html, body{
 <body>
 
 <div class="header">
-<div class="header-title">
-<strong>SARAPHI TECHNICAL</strong>
-<span style="font-weight:normal;font-size:13px;"> ( วิทยาลัยเทคนิคสารภี )</span>
-<div class="sub">Wind Monitoring System</div>
-</div>
-
-<div class="header-right">
-<div class="wind-display">Wind:&nbsp;<b id="windValue">–</b>&nbsp;m/s</div>
-<span id="statusBadge" class="badge normal">NORMAL</span>
-<button class="toggle-btn" id="toggleBtn" onclick="toggleDark()">🌙 Dark Mode</button>
-</div>
+    <div class="header-title">
+        <strong>SARAPHI TECHNICAL</strong>
+        <span style="font-weight:normal;font-size:13px;"> ( วิทยาลัยเทคนิคสารภี )</span>
+        <div class="sub">Wind Monitoring System &nbsp;|&nbsp; กราฟแสดงวัดค่าความแรงของลม</div>
+    </div>
+    <div class="header-right">
+        <div class="wind-display">Wind:&nbsp;<b id="windValue">–</b>&nbsp;m/s</div>
+        <span id="statusBadge" class="badge normal">NORMAL</span>
+        <button class="toggle-btn" id="toggleBtn" onclick="toggleDark()">🌙 Dark Mode</button>
+    </div>
 </div>
 
 <div class="dashboard">
 
-<div class="card">
-<div class="card-header">
-<h3>สถิติรายชั่วโมง (24 ชั่วโมงล่าสุด)</h3>
-<span class="unit">m/s · max/hr</span>
-</div>
-<div class="chart-wrap"><canvas id="chart24"></canvas></div>
-</div>
+    <div class="card">
+        <div class="card-header">
+            <h3>สถิติรายชั่วโมง (24 ชั่วโมงล่าสุด)</h3>
+            <span class="unit">m/s · max/hr</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart24"></canvas></div>
+    </div>
 
-<div class="card">
-<div class="card-header">
-<h3>ค่าปัจจุบันแบบเรียลไทม์ (5 นาทีล่าสุด)</h3>
-<span class="unit">m/s · แสดงค่าทุก 1 นาที</span>
-</div>
-<div class="chart-wrap"><canvas id="chart5m"></canvas></div>
-</div>
+    <div class="card">
+        <div class="card-header">
+            <h3>ค่าปัจจุบันแบบเรียลไทม์ (5 นาทีล่าสุด)</h3>
+            <span class="unit">m/s · แสดงค่าทุก 1 นาที</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart5m"></canvas></div>
+    </div>
 
-<div class="card full">
-<div class="card-header">
-<h3>สถิติสูงสุดรายวัน (ย้อนหลัง 1 สัปดาห์)</h3>
-<span class="unit">m/s · max/day</span>
-</div>
-<div class="chart-wrap"><canvas id="chart7d"></canvas></div>
-</div>
+    <div class="card full">
+        <div class="card-header">
+            <h3>สถิติสูงสุดรายวัน (ย้อนหลัง 1 สัปดาห์)</h3>
+            <span class="unit">m/s · max/day</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
+        <div class="conn-bar">
+            <div class="conn-dot" id="connDot"></div>
+            <span class="conn-title">สถานการณ์ทำงาน :</span>
+            <span class="conn-label ok" id="connLabel">( เปิด )</span>
+            <span id="lastSeen"></span>
+        </div>
+    </div>
 
 </div>
 
 <script>
 
 /* ===== CONFIG ===== */
-
-const CH='3279862'
-const RKEY='RW4WW5ICILK0P78L'
-const BASE=`https://api.thingspeak.com/channels/${CH}`
-const FIELD='field1'
+const CH    = '3279862';
+const RKEY  = 'RW4WW5ICILK0P78L';
+const BASE  = `https://api.thingspeak.com/channels/${CH}`;
+const FIELD = 'field1';
 
 /* ===== CHART FACTORY ===== */
-
-function mkChart(id,color,extraOpts={}){
-
-return new Chart(document.getElementById(id),{
-
-type:'line',
-
-data:{
-labels:[],
-datasets:[{
-data:[],
-borderColor:color,
-backgroundColor:color.replace('1)','0.12)'),
-borderWidth:2,
-tension:0.3,
-fill:true,
-pointRadius:3
-}]
-},
-
-options:{
-responsive:true,
-maintainAspectRatio:false,
-
-plugins:{legend:{display:false}},
-
-scales:{
-
-y:{
-beginAtZero:true,
-max:50
-},
-
-x:{
-ticks:{
-font:{size:10},
-maxRotation:45,
-autoSkip:false,
-maxTicksLimit:extraOpts.maxTicks || 12
-}
+function mkChart(id, color, extraOpts = {}){
+    return new Chart(document.getElementById(id), {
+        type:'line',
+        data:{
+            labels:[],
+            datasets:[{
+                data:[],
+                borderColor: color,
+                backgroundColor: color.replace('1)', '0.12)'),
+                borderWidth:2,
+                tension:0.3,
+                fill:true,
+                pointRadius:3,
+                spanGaps:false
+            }]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            animation:{ duration:400 },
+            plugins:{ legend:{ display:false } },
+            scales:{
+                y:{
+                    beginAtZero:true,
+                    max:50,
+                    ticks:{ font:{ size:10 } }
+                },
+                x:{
+                    ticks:{
+                        font:{ size:10 },
+                        maxRotation:45,
+                        autoSkip:false,
+                        maxTicksLimit: extraOpts.maxTicks || 12
+                    }
+                }
+            }
+        }
+    });
 }
 
-}
-
-}
-
-})
-
-}
-
-const c24=mkChart('chart24','rgba(59,130,246,1)',{maxTicks:12})
-const c5m=mkChart('chart5m','rgba(16,185,129,1)',{maxTicks:10})
-const c7d=mkChart('chart7d','rgba(245,158,11,1)',{maxTicks:7})
+const c24 = mkChart('chart24', 'rgba(59,130,246,1)',  { maxTicks:12 });
+const c5m = mkChart('chart5m', 'rgba(16,185,129,1)',  { maxTicks:10 });
+const c7d = mkChart('chart7d', 'rgba(245,158,11,1)',  { maxTicks:7  });
 
 function toggleDark(){
-const isDark=document.body.classList.toggle('dark')
-document.getElementById('toggleBtn').innerText=isDark?'☀️ Light Mode':'🌙 Dark Mode'
+    const isDark = document.body.classList.toggle('dark');
+    document.getElementById('toggleBtn').innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
 </script>
-
 </body>
 </html>
