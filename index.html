@@ -35,7 +35,61 @@ html, body{
     min-height:100%;
 }
 
-/* ===== HEADER ===== */
+/* =====================
+   DESKTOP: ไม่ scroll
+   ===================== */
+@media (min-width: 769px){
+    html, body{
+        height:100%;
+        overflow:hidden;
+    }
+    body{ display:flex; flex-direction:column; }
+    .dashboard{
+        flex:1;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        grid-template-rows:1fr 1fr;
+        gap:10px;
+        padding:10px;
+        min-height:0;
+    }
+    .card{ min-height:0; }
+    .chart-wrap{ flex:1; position:relative; min-height:0; }
+}
+
+/* =====================
+   MOBILE: เลื่อนได้ 3 ชั้น
+   ===================== */
+@media (max-width: 768px){
+    html, body{
+        overflow-y:auto;
+    }
+    .header{
+        flex-direction:column;
+        align-items:flex-start !important;
+        gap:8px;
+        padding:10px 14px !important;
+    }
+    .header-right{
+        width:100%;
+        flex-wrap:wrap;
+        gap:8px !important;
+    }
+    .wind-display{ font-size:13px !important; }
+    .wind-display b{ font-size:17px !important; }
+    .dashboard{
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+        padding:10px;
+    }
+    .card.full{ grid-column:unset; }
+    .chart-wrap{
+        position:relative;
+        height:200px;
+    }
+}
+
 .header{
     background:var(--header);
     color:white;
@@ -43,6 +97,7 @@ html, body{
     display:flex;
     justify-content:space-between;
     align-items:center;
+    flex-shrink:0;
 }
 
 .header-title .sub{ font-size:11px; opacity:0.8; margin-top:2px; }
@@ -76,17 +131,8 @@ html, body{
     background:#4b5563;
     color:white;
     font-size:12px;
+    user-select:none;
     border:none;
-}
-
-/* ===== DASHBOARD ===== */
-
-.dashboard{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    grid-template-rows:1fr 1fr;
-    gap:10px;
-    padding:10px;
 }
 
 .card{
@@ -104,20 +150,15 @@ html, body{
     display:flex;
     justify-content:space-between;
     align-items:center;
+    flex-shrink:0;
     margin-bottom:4px;
 }
 
-.card h3{ font-size:12px; }
+.card h3{ font-size:12px; font-weight:600; color:var(--text); }
 .card .unit{ font-size:11px; color:var(--subtext); }
 
-.chart-wrap{
-    position:relative;
-    height:250px;
-}
-
-/* ===== CONNECTION ===== */
-
 .conn-bar{
+    flex-shrink:0;
     margin-top:6px;
     padding-top:6px;
     border-top:2px solid var(--border);
@@ -125,6 +166,20 @@ html, body{
     align-items:center;
     justify-content:center;
     gap:10px;
+    flex-wrap:wrap;
+}
+
+.conn-label{
+    font-size:15px;
+    font-weight:700;
+}
+
+.conn-label.ok  { color:#16a34a; }
+.conn-label.fail{ color:#dc2626; }
+
+.conn-title{
+    font-size:14px;
+    color:var(--subtext);
 }
 
 .conn-dot{
@@ -138,9 +193,7 @@ html, body{
     background:#dc2626;
 }
 
-.conn-label.ok{ color:#16a34a; }
-.conn-label.fail{ color:#dc2626; }
-
+#lastSeen{ font-size:11px; color:var(--subtext); }
 </style>
 </head>
 
@@ -184,15 +237,8 @@ html, body{
 <span class="unit">m/s · max/day</span>
 </div>
 <div class="chart-wrap"><canvas id="chart7d"></canvas></div>
-
-<div class="conn-bar">
-<div class="conn-dot" id="connDot"></div>
-<span class="conn-title">สถานการณ์ทำงาน :</span>
-<span class="conn-label ok" id="connLabel">( เปิด )</span>
-<span id="lastSeen"></span>
 </div>
 
-</div>
 </div>
 
 <script>
@@ -206,7 +252,7 @@ const FIELD='field1'
 
 /* ===== CHART FACTORY ===== */
 
-function mkChart(id,color,maxTicks){
+function mkChart(id,color,extraOpts={}){
 
 return new Chart(document.getElementById(id),{
 
@@ -235,13 +281,15 @@ scales:{
 
 y:{
 beginAtZero:true,
-max:50   /* แก้จาก 90 → 50 */
+max:50
 },
 
 x:{
 ticks:{
-autoSkip:false,  /* ให้เวลาแสดงตลอด */
-maxRotation:45
+font:{size:10},
+maxRotation:45,
+autoSkip:false,
+maxTicksLimit:extraOpts.maxTicks || 12
 }
 }
 
@@ -253,15 +301,9 @@ maxRotation:45
 
 }
 
-const c24=mkChart('chart24','rgba(59,130,246,1)',12)
-const c5m=mkChart('chart5m','rgba(16,185,129,1)',10)
-const c7d=mkChart('chart7d','rgba(245,158,11,1)',7)
-
-function applyChart(chart,labels,data){
-chart.data.labels=labels
-chart.data.datasets[0].data=data
-chart.update()
-}
+const c24=mkChart('chart24','rgba(59,130,246,1)',{maxTicks:12})
+const c5m=mkChart('chart5m','rgba(16,185,129,1)',{maxTicks:10})
+const c7d=mkChart('chart7d','rgba(245,158,11,1)',{maxTicks:7})
 
 function toggleDark(){
 const isDark=document.body.classList.toggle('dark')
