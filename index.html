@@ -9,49 +9,17 @@
 
 <style>
 *{ box-sizing:border-box; margin:0; padding:0; }
-
-:root{
-    --bg:#f4f6f9;
-    --card:#ffffff;
-    --text:#111;
-    --header:#1f2937;
-    --subtext:#6b7280;
-    --border:rgba(0,0,0,0.08);
-}
-
-body.dark{
-    --bg:#111827;
-    --card:#1f2937;
-    --text:#f3f4f6;
-    --header:#000000;
-    --subtext:#9ca3af;
-    --border:rgba(255,255,255,0.08);
-}
-
-html, body{
-    font-family:'Segoe UI', sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    transition:background 0.3s, color 0.3s;
-    min-height:100%;
-}
+:root{ --bg:#f4f6f9; --card:#ffffff; --text:#111; --header:#1f2937; --subtext:#6b7280; --border:rgba(0,0,0,0.08); }
+body.dark{ --bg:#111827; --card:#1f2937; --text:#f3f4f6; --header:#000000; --subtext:#9ca3af; --border:rgba(255,255,255,0.08); }
+html, body{ font-family:'Segoe UI', sans-serif; background:var(--bg); color:var(--text); transition:background 0.3s, color 0.3s; min-height:100%; }
 
 @media (min-width: 769px){
     html, body{ height:100%; overflow:hidden; }
     body{ display:flex; flex-direction:column; }
-    .dashboard{
-        flex:1;
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        grid-template-rows:1fr 1fr;
-        gap:10px;
-        padding:10px;
-        min-height:0;
-    }
+    .dashboard{ flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:10px; padding:10px; min-height:0; }
     .card{ min-height:0; }
     .chart-wrap{ flex:1; position:relative; min-height:0; }
 }
-
 @media (max-width: 768px){
     html, body{ overflow-y:auto; }
     .header{ flex-direction:column; align-items:flex-start !important; gap:8px; padding:10px 14px !important; }
@@ -63,101 +31,29 @@ html, body{
     .chart-wrap{ position:relative; height:220px; }
 }
 
-.header{
-    background:var(--header);
-    color:white;
-    padding:9px 20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-shrink:0;
-}
+.header{ background:var(--header); color:white; padding:9px 20px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
 .header-title .sub{ font-size:11px; opacity:0.8; margin-top:2px; }
 .header-right{ display:flex; align-items:center; gap:12px; }
-
-.wind-display{
-    font-size:15px;
-    background:rgba(255,255,255,0.1);
-    padding:4px 12px;
-    border-radius:8px;
-}
+.wind-display{ font-size:15px; background:rgba(255,255,255,0.1); padding:4px 12px; border-radius:8px; }
 .wind-display b{ font-size:20px; }
-
-.badge{
-    padding:4px 11px;
-    border-radius:20px;
-    font-size:12px;
-    font-weight:600;
-    color:white;
-    letter-spacing:0.5px;
-}
+.badge{ padding:4px 11px; border-radius:20px; font-size:12px; font-weight:600; color:white; letter-spacing:0.5px; }
 .normal { background:#16a34a; }
 .warning{ background:#d97706; }
 .danger { background:#dc2626; }
-
-.toggle-btn{
-    cursor:pointer;
-    padding:5px 13px;
-    border-radius:20px;
-    background:#4b5563;
-    color:white;
-    font-size:12px;
-    user-select:none;
-    border:none;
-}
-
-.card{
-    background:var(--card);
-    border-radius:12px;
-    box-shadow:0 3px 10px rgba(0,0,0,0.12);
-    padding:8px 10px;
-    display:flex;
-    flex-direction:column;
-    transition:background 0.3s;
-}
+.toggle-btn{ cursor:pointer; padding:5px 13px; border-radius:20px; background:#4b5563; color:white; font-size:12px; border:none; }
+.card{ background:var(--card); border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.12); padding:8px 10px; display:flex; flex-direction:column; transition:background 0.3s; }
 .card.full{ grid-column:span 2; }
-
-.card-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-shrink:0;
-    margin-bottom:4px;
-}
+.card-header{ display:flex; justify-content:space-between; align-items:center; flex-shrink:0; margin-bottom:4px; }
 .card h3{ font-size:12px; font-weight:600; color:var(--text); }
 .card .unit{ font-size:11px; color:var(--subtext); }
-
-.conn-bar{
-    flex-shrink:0;
-    margin-top:6px;
-    padding-top:6px;
-    border-top:2px solid var(--border);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    flex-wrap:wrap;
-}
-
+.conn-bar{ flex-shrink:0; margin-top:6px; padding-top:6px; border-top:2px solid var(--border); display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
 .conn-label{ font-size:15px; font-weight:700; }
-.conn-label.ok  { color:#16a34a; }
+.conn-label.ok { color:#16a34a; }
 .conn-label.fail{ color:#dc2626; }
 .conn-title{ font-size:14px; color:var(--subtext); font-weight:500; }
-
-.conn-dot{
-    width:11px; height:11px;
-    border-radius:50%;
-    background:#16a34a;
-    animation:pulse-g 2s infinite;
-}
+.conn-dot{ width:11px; height:11px; border-radius:50%; background:#16a34a; animation:pulse-g 2s infinite; }
 .conn-dot.off{ background:#dc2626; animation:none; }
-
-@keyframes pulse-g{
-    0%  { box-shadow:0 0 0 0 rgba(22,163,74,0.6); }
-    70% { box-shadow:0 0 0 7px rgba(22,163,74,0); }
-    100%{ box-shadow:0 0 0 0 rgba(22,163,74,0); }
-}
-
+@keyframes pulse-g{ 0% { box-shadow:0 0 0 0 rgba(22,163,74,0.6); } 70% { box-shadow:0 0 0 7px rgba(22,163,74,0); } 100%{ box-shadow:0 0 0 0 rgba(22,163,74,0); } }
 #lastSeen{ font-size:11px; color:var(--subtext); }
 </style>
 </head>
@@ -180,18 +76,18 @@ html, body{
 <div class="dashboard">
     <div class="card">
         <div class="card-header">
-            <h3>สถิติรายชั่วโมง (24 ชั่วโมงล่าสุด)</h3>
-            <span class="unit">m/s · max/hr</span>
-        </div>
-        <div class="chart-wrap"><canvas id="chart24"></canvas></div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
             <h3>ค่าปัจจุบันแบบเรียลไทม์ (5 นาทีล่าสุด)</h3>
             <span class="unit">m/s · แสดงค่าทุก 1 นาที</span>
         </div>
         <div class="chart-wrap"><canvas id="chart5m"></canvas></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>สถิติรายชั่วโมง (8 ชั่วโมงล่าสุด)</h3>
+            <span class="unit">m/s · max/hr</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart8h"></canvas></div>
     </div>
 
     <div class="card full">
@@ -210,9 +106,6 @@ html, body{
 </div>
 
 <script>
-/* ลงทะเบียน Plugin Datalabels ให้กับ Chart.js ทั้งหมด
-   เพื่อแก้ปัญหาเลขไม่ขึ้นในบางกรณี 
-*/
 Chart.register(ChartDataLabels);
 
 const CH    = '3279862';
@@ -225,15 +118,7 @@ function mkChart(id, color, extraOpts = {}){
         type:'line',
         data:{
             labels:[],
-            datasets:[{
-                data:[],
-                borderColor: color,
-                backgroundColor: color.replace('1)', '0.12)'),
-                borderWidth:2,
-                tension:0.3,
-                fill:true,
-                pointRadius:4
-            }]
+            datasets:[{ data:[], borderColor: color, backgroundColor: color.replace('1)', '0.12)'), borderWidth:2, tension:0.3, fill:true, pointRadius:4 }]
         },
         options:{
             responsive:true,
@@ -243,99 +128,70 @@ function mkChart(id, color, extraOpts = {}){
             plugins:{ 
                 legend:{ display:false },
                 datalabels: {
-                    align: 'top',
-                    anchor: 'end',
-                    offset: 2,
-                    color: '#888',
-                    font: { weight: 'bold', size: 10 },
-                    // แสดงตัวเลขทศนิยม 1 ตำแหน่งเสมอ
-                    formatter: (value) => {
-                        return (value !== undefined && value !== null) ? value.toFixed(1) : '';
-                    },
-                    display: true // บังคับให้แสดงผล
+                    align: 'top', anchor: 'end', offset: 2, color: '#888', font: { weight: 'bold', size: 10 },
+                    formatter: (v) => (v !== null) ? v.toFixed(1) : '',
+                    display: true
                 }
             },
             scales:{
-                y:{
-                    beginAtZero:true,
-                    max: 50, // ปรับสูงสุดเป็น 50 ตามต้องการ
-                    ticks:{ font:{ size:10 } }
-                },
-                x:{
-                    ticks:{
-                        font:{ size:10 },
-                        autoSkip:true,
-                        maxTicksLimit: extraOpts.maxTicks || 10
-                    }
-                }
+                y:{ beginAtZero:true, max: 50, ticks:{ font:{ size:10 } } },
+                x:{ ticks:{ font:{ size:10 }, autoSkip:true, maxTicksLimit: extraOpts.maxTicks || 10 } }
             }
         }
     });
 }
 
-const c24 = mkChart('chart24', 'rgba(59,130,246,1)', { maxTicks:12 });
 const c5m = mkChart('chart5m', 'rgba(16,185,129,1)', { maxTicks:5 });
+const c8h = mkChart('chart8h', 'rgba(59,130,246,1)', { maxTicks:8 });
 const c7d = mkChart('chart7d', 'rgba(245,158,11,1)', { maxTicks:7 });
 
 function applyChart(chart, labels, data){
     chart.data.labels = labels;
     chart.data.datasets[0].data = data;
-    chart.update('none'); // อัปเดตแบบไม่ต้องมี animation ซ้ำซ้อนเพื่อความเร็ว
+    chart.update('none');
 }
 
-/* ปรับปรุงฟังก์ชันคำนวณข้อมูลให้แม่นยำขึ้น */
 function fillTimeline(feeds, slotMs, totalSlots){
     const now   = Date.now();
     const start = now - (totalSlots - 1) * slotMs;
     const slots = new Array(totalSlots).fill(0);
-
     feeds.forEach(f => {
         const t   = new Date(f.created_at).getTime();
-        const idx = Math.floor((t - start) / slotMs); // ใช้ floor เพื่อความแม่นยำของช่องเวลา
+        const idx = Math.floor((t - start) / slotMs);
         if(idx >= 0 && idx < totalSlots){
             const v = parseFloat(f[FIELD]);
             if(!isNaN(v)) slots[idx] = Math.max(slots[idx], v);
         }
     });
-
     const times = Array.from({length: totalSlots}, (_,i) => new Date(start + i * slotMs));
     return { slots, times };
 }
 
 async function fetch5m(){
     try {
-        // ดึงข้อมูล 5 นาทีล่าสุด
         const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=5`);
         const json  = await res.json();
         const feeds = (json.feeds || []).filter(f => f[FIELD] !== null);
-
-        // แสดงผลกราฟ 5 ช่อง (นาทีละช่อง)
         const { slots, times } = fillTimeline(feeds, 60000, 5);
-        const labels = times.map(t => `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`);
-        applyChart(c5m, labels, slots);
-
+        applyChart(c5m, times.map(t => `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`), slots);
         if(feeds.length > 0){
-            const last   = feeds[feeds.length - 1];
+            const last = feeds[feeds.length-1];
             const lastDt = new Date(last.created_at);
-            const secAgo = (Date.now() - lastDt.getTime()) / 1000;
-            
-            // ถ้าข้อมูลล่าสุดไม่เกิน 2 นาที ให้ถือว่ายังเชื่อมต่ออยู่ (เผื่อเวลา Sensor หน่วง)
-            const ok = secAgo <= 120; 
+            const ok = (Date.now() - lastDt.getTime()) / 1000 <= 120;
             updateBadge(ok ? parseFloat(last[FIELD]) : null);
             setConn(ok, lastDt.toLocaleTimeString('th-TH'));
-        } else {
-            updateBadge(null); setConn(false, null);
-        }
+        } else { updateBadge(null); setConn(false, null); }
     } catch(e){ console.error(e); }
 }
 
-async function fetch24h(){
+async function fetch8h(){
     try {
-        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=1440`);
+        // ดึงข้อมูลย้อนหลัง 8 ชม. (480 นาที)
+        const res   = await fetch(`${BASE}/feeds.json?api_key=${RKEY}&minutes=480`);
         const json  = await res.json();
         const feeds = (json.feeds || []).filter(f => f[FIELD] !== null);
-        const { slots, times } = fillTimeline(feeds, 3600000, 24);
-        applyChart(c24, times.map(t => `${t.getHours()}.00`), slots);
+        const { slots, times } = fillTimeline(feeds, 3600000, 8);
+        applyChart(c8h, times.map(t => `${t.getHours()}.00`), slots);
     } catch(e){ console.error(e); }
 }
 
@@ -353,11 +209,7 @@ async function fetch7d(){
 function updateBadge(val){
     const vEl = document.getElementById('windValue');
     const b = document.getElementById('statusBadge');
-    if(val === null){ 
-        vEl.innerText = '–'; 
-        b.className='badge normal'; b.innerText='NO DATA'; 
-        return; 
-    }
+    if(val === null){ vEl.innerText = '–'; b.className='badge normal'; b.innerText='NO DATA'; return; }
     vEl.innerText = val.toFixed(1);
     if(val < 30) { b.className='badge normal'; b.innerText='NORMAL'; }
     else if(val < 50) { b.className='badge warning'; b.innerText='WARNING'; }
@@ -365,24 +217,14 @@ function updateBadge(val){
 }
 
 function setConn(ok, timeStr){
-    const dot = document.getElementById('connDot');
-    const lbl = document.getElementById('connLabel');
-    const ls  = document.getElementById('lastSeen');
-    if(ok){
-        dot.className = 'conn-dot';
-        lbl.className = 'conn-label ok'; lbl.innerText = '( เปิด )';
-        ls.innerText  = `· อัปเดต ${timeStr}`;
-    } else {
-        dot.className = 'conn-dot off';
-        lbl.className = 'conn-label fail'; lbl.innerText = '( ปิด )';
-        ls.innerText  = timeStr ? `· ล่าสุด ${timeStr}` : '· ไม่มีข้อมูล';
-    }
+    const dot = document.getElementById('connDot'), lbl = document.getElementById('connLabel'), ls = document.getElementById('lastSeen');
+    if(ok){ dot.className='conn-dot'; lbl.className='conn-label ok'; lbl.innerText='( เปิด )'; ls.innerText=`· อัปเดต ${timeStr}`; }
+    else { dot.className='conn-dot off'; lbl.className='conn-label fail'; lbl.innerText='( ปิด )'; ls.innerText=timeStr?`· ล่าสุด ${timeStr}`:'· ไม่มีข้อมูล'; }
 }
 
-// เริ่มการทำงาน
-fetch5m(); fetch24h(); fetch7d();
+fetch5m(); fetch8h(); fetch7d();
 setInterval(fetch5m, 15000);
-setInterval(fetch24h, 60000);
+setInterval(fetch8h, 60000);
 setInterval(fetch7d, 300000);
 
 function toggleDark(){
